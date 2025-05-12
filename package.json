@@ -12,6 +12,9 @@
     "lint": "eslint src --ext .ts,.tsx",
     "prepare": "yarn build"
   },
+  "files": [
+    "dist"
+  ],
   "author": "James Trickey",
   "license": "MIT",
   "private": false,
