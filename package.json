@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "State management control layer for React projects",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,11 @@
     "lint": "eslint src --ext .ts,.tsx",
     "build": "tsc",
     "prepare": "yarn build",
-    "pub": "yarn version --patch && git stage -A && git commit -m 'chore: bump version' && git tag -a v$npm_package_version && git push --follow-tags"
+    "version:patch": "yarn version --patch --yes",
+    "git:stage-commit": "git stage -A && git commit -m 'chore: bump version'",
+    "git:tag": "git tag -a v$npm_package_version",
+    "git:push": "git push --follow-tags",
+    "pub": "yarn version:patch && git:stage-commit && git:tag && git:push"
   },
   "files": [
     "dist"
