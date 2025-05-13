@@ -5,6 +5,8 @@ import { useStoreProxy } from './use-store-proxy'
 import { wrapObservable } from '../utils/stream'
 import { Store } from '../types/store'
 
+type ObservableValue<O> = O extends Observable<infer T> ? T : never;
+
 export function useObservable<
   O extends Observable<any>
 >(
@@ -12,7 +14,7 @@ export function useObservable<
     store: Store,
     wrapObservable: <T = unknown>(observable: Observable<T>) => Observable<T>
   }) => O
-): Readonly<ReturnType<O['get']>> {
+): ObservableValue<O> {
   const ref = useRef<O | undefined>(undefined)
   const subscriptionsRef = useRef<(() => void)[]>([])
 
@@ -33,10 +35,10 @@ export function useObservable<
     })
   }
 
-  const [data, setData] = useState<Readonly<ReturnType<O['get']>>>(ref.current.get())
+  const [data, setData] = useState<ObservableValue<O>>(ref.current.get())
 
   useEffect(() => {
-    const sub = ref.current?.subscribe((newData: Readonly<ReturnType<O['get']>>) => {
+    const sub = ref.current?.subscribe((newData: ObservableValue<O>) => {
       setData(newData)
     })
 
