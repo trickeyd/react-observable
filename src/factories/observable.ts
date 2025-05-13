@@ -16,7 +16,6 @@ import {
   EmitErrorOperator,
   UnsubscribeFunction,
   CombineLatestFromOperator,
-  WithLatestFromOperator,
   TapOperator,
   MapEntriesOperator,
   GetInitialValueOperator,
@@ -130,11 +129,10 @@ export const createObservable = <T extends unknown>(
     return combinationObservable$
   }
 
-  const withLatestFrom: WithLatestFromOperator<T> = <U extends unknown[]>(
-    ...observables: { [K in keyof U]: Observable<U[K]> }
+  const withLatestFrom = <OtherT extends unknown[]>(
+    ...observables: Observable<OtherT>[]
   ) => {
-    type CombinedValues = [T, ...U]
-
+    type CombinedValues = [T, ...OtherT]
     const resultObservable$ = createObservable<CombinedValues>({
       initialValue: [
         get(),
@@ -152,7 +150,6 @@ export const createObservable = <T extends unknown>(
       },
       (err: Error) => resultObservable$.emitError(err),
     )
-
     return resultObservable$
   }
 

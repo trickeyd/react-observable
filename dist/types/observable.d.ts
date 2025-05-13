@@ -17,10 +17,6 @@ export type CombineLatestFromOperator<T, U extends unknown[] = unknown[]> = <New
     [K in keyof U]: Observable<U[K]>;
 }) => Observable<[T, ...U]>;
 /** @internal */
-export type WithLatestFromOperator<T, U extends unknown[] = unknown[]> = <NewT = unknown>(...observables: {
-    [K in keyof U]: Observable<U[K]>;
-}) => Observable<[T, ...U]>;
-/** @internal */
 export type TapOperator<T> = (callback: (currentValue: Readonly<T>) => void) => Observable<T>;
 /** @internal */
 export type DelayOperator<T> = (milliseconds: number) => Observable<T>;
@@ -54,7 +50,9 @@ export interface Observable<T> {
     stream: StreamProjection<T, false>;
     streamAsync: StreamProjection<T, true>;
     combineLatestFrom: CombineLatestFromOperator<T>;
-    withLatestFrom: WithLatestFromOperator<T>;
+    withLatestFrom: <OtherT extends unknown[]>(...observables: Observable<OtherT>[]) => Observable<[T, ...{
+        [K in keyof OtherT]: OtherT[K];
+    }]>;
     tap: TapOperator<T>;
     delay: DelayOperator<T>;
     catchError: CatchErrorOperator<T>;
