@@ -24,6 +24,7 @@ __exportStar(require("./store/context"), exports);
 __exportStar(require("./hooks/use-observable"), exports);
 __exportStar(require("./hooks/use-stream"), exports);
 __exportStar(require("./hooks/use-equality-checker"), exports);
+__exportStar(require("./factories/create-stream"), exports);
 var observable_1 = require("./factories/observable");
 Object.defineProperty(exports, "createObservable", { enumerable: true, get: function () { return observable_1.createObservable; } });
 var persistent_observable_1 = require("./factories/persistent-observable");

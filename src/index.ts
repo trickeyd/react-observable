@@ -7,6 +7,7 @@ export * from './store/context'
 export * from './hooks/use-observable'
 export * from './hooks/use-stream'
 export * from './hooks/use-equality-checker'
+export * from './factories/create-stream'
 export { createObservable } from './factories/observable'
 export {
   createPersistentObservable,
