@@ -14,10 +14,10 @@ type ExecuteReturnType<T> = [T, undefined] | [undefined, Error]
 
 export const createStream = <ReturnT, InputT = undefined>(
   initialise: ({
-    entry$,
+    $,
     store,
   }: {
-    entry$: Observable<InputT>
+    $: Observable<InputT>
     store: Store
   }) => Observable<ReturnT>,
   { onError, initialValue, result$ }: Props<ReturnT> = {},
@@ -36,7 +36,7 @@ export const createStream = <ReturnT, InputT = undefined>(
 
   const unSubMain = store$.subscribe((store: Safe<Store>) => {
     const stream$: Observable<ReturnT> = initialise({
-      entry$: entry$ as Observable<InputT>,
+      $: entry$ as Observable<InputT>,
       store: store as Store,
     })
     stream$.subscribe((val) => exit$.set(val as ReturnT), exit$.emitError)

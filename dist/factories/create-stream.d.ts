@@ -6,8 +6,8 @@ interface Props<ReturnT> {
     result$?: Observable<ReturnT>;
 }
 type ExecuteReturnType<T> = [T, undefined] | [undefined, Error];
-export declare const createStream: <ReturnT, InputT = undefined>(initialise: ({ entry$, store, }: {
-    entry$: Observable<InputT>;
+export declare const createStream: <ReturnT, InputT = undefined>(initialise: ({ $, store, }: {
+    $: Observable<InputT>;
     store: Store;
 }) => Observable<ReturnT>, { onError, initialValue, result$ }?: Props<ReturnT>) => {
     (payload?: InputT): Promise<ExecuteReturnType<ReturnT>>;

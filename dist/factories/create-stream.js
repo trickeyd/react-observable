@@ -12,7 +12,7 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
     }
     const unSubMain = createStore_1.store$.subscribe((store) => {
         const stream$ = initialise({
-            entry$: entry$,
+            $: entry$,
             store: store,
         });
         stream$.subscribe((val) => exit$.set(val), exit$.emitError);
