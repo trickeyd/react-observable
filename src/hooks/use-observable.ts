@@ -14,7 +14,7 @@ export function useObservable<
     store: Store,
     wrapObservable: <T = unknown>(observable: Observable<T>) => Observable<T>
   }) => O
-): ObservableValue<O> {
+): Readonly<ObservableValue<O>> {
   const ref = useRef<O | undefined>(undefined)
   const subscriptionsRef = useRef<(() => void)[]>([])
 
@@ -49,5 +49,5 @@ export function useObservable<
     }
   }, [])
 
-  return data
+  return data as Readonly<ObservableValue<O>>
 } 
