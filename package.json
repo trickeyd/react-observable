@@ -16,7 +16,7 @@
     "git:stage-commit": "git add -A && git commit -m 'chore: bump version'",
     "git:tag": "git tag -a v$npm_package_version",
     "git:push": "git push --follow-tags",
-    "pub": "yarn build &&yarn git:stage-commit && yarn version:patch &&  yarn git:tag && yarn git:push"
+    "pub": "yarn build &&yarn git:stage-commit && yarn version:patch && yarn git:tag && yarn git:push"
   },
   "files": [
     "dist"
