@@ -50,7 +50,9 @@ export interface Observable<T> {
     stream: StreamProjection<T, false>;
     streamAsync: StreamProjection<T, true>;
     combineLatestFrom: CombineLatestFromOperator<T>;
-    withLatestFrom: <OtherT extends unknown[]>(...observables: Observable<OtherT>[]) => Observable<[T, ...{
+    withLatestFrom: <OtherT extends unknown[]>(...observables: [...{
+        [K in keyof OtherT]: Observable<OtherT[K]>;
+    }]) => Observable<[T, ...{
         [K in keyof OtherT]: OtherT[K];
     }]>;
     tap: TapOperator<T>;

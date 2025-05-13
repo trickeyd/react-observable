@@ -130,9 +130,10 @@ export const createObservable = <T extends unknown>(
   }
 
   const withLatestFrom = <OtherT extends unknown[]>(
-    ...observables: Observable<OtherT>[]
+    ...observables:[...{ [K in keyof OtherT]: Observable<OtherT[K]>}]
   ) => {
-    type CombinedValues = [T, ...OtherT]
+    type CombinedValues = [T, ...{ [K in keyof OtherT]: OtherT[K] }]
+
     const resultObservable$ = createObservable<CombinedValues>({
       initialValue: [
         get(),
