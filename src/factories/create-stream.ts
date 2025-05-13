@@ -2,7 +2,7 @@ import { createObservable } from './observable'
 import { Observable } from '../types/observable'
 import { Store } from '../types/store'
 import { store$ } from '../store/createStore'
-import { SafeMutable } from '../types/access'
+import { Safe } from '../types/access'
 
 interface Props<ReturnT> {
   onError?: (err: Error) => void
@@ -34,7 +34,7 @@ export const createStream = <ReturnT, InputT = undefined>(
   }
   
 
-  const unSubMain = store$.subscribe((store: SafeMutable<Store>) => {
+  const unSubMain = store$.subscribe((store: Safe<Store>) => {
     const stream$: Observable<ReturnT> = initialise({
       entry$: entry$ as Observable<InputT>,
       store: store as Store,

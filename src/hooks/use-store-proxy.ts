@@ -2,13 +2,13 @@ import { useRef, useContext } from 'react'
 import { Store } from '../types/store'
 import { ReactObservableContext } from '../store/context'
 import { wrapObservable } from '../utils/stream'
-import { SafeMutable } from '../types/access'
+import { Safe } from '../types/access'
 
 export const useStoreProxy = (onSubscription: (unsubscribe: () => void) => void) => {
   const observableStore = useContext(ReactObservableContext)
 
   const observableStoreProxy = useRef(
-    Object.entries(observableStore as SafeMutable<Store>).reduce(
+    Object.entries(observableStore as Safe<Store>).reduce(
       (acc, [segmentName, segment]) => ({
         ...acc,
         [segmentName]: new Proxy(segment, {
