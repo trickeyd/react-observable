@@ -27,7 +27,12 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
             resolve([undefined, error]);
             unsub();
         });
-        payload ? entry$.set(payload, true) : entry$.emit();
+        if (payload) {
+            entry$.setSilent(payload);
+        }
+        else {
+            entry$.emit();
+        }
     });
     execute.exit$ = exit$;
     return execute;

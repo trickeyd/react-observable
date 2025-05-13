@@ -48,13 +48,12 @@ export const createObservable = <T extends unknown>(
   const emitError: EmitErrorOperator = (err: Error) =>
     listenerRecords.forEach(({ onError }) => onError?.(err))
 
-  const set: ObservableSetter<T> = (newValue, forceEmit = false) => {
+  const _setInternal= (isSilent:boolean): ObservableSetter<T> => (newValue) => {
     const reducedValue: T = (
       isFunction(newValue) ? newValue(get()) : newValue
     ) as T
 
     if (
-      !forceEmit &&
       ((equalityFn &&
         !equalityFn(
           value as Readonly<T>,
@@ -66,8 +65,12 @@ export const createObservable = <T extends unknown>(
     }
 
     value = reducedValue
-    emit()
+    isSilent && emit()
   }
+
+  const set: ObservableSetter<T> = _setInternal(true)
+  const setSilent: ObservableSetter<T> = _setInternal(false)
+
 
   const subscribe: SubscribeFunction<T> = (listener, onError) => {
     const id = uuid.v4() as string
@@ -304,6 +307,7 @@ export const createObservable = <T extends unknown>(
   const observable: Observable<T> = {
     get, 
     set,
+    setSilent,
     subscribe,
     subscribeWithValue,
     stream,

@@ -22,16 +22,18 @@ function createPersistentObservable({ name, initialValue, equalityFn, mergeOnHyd
     let _rehydrateIsComplete = false;
     let _resolveRehydrate;
     const base = (0, observable_1.createObservable)({ initialValue, name });
-    const set = (newValue) => {
+    const _setInternal = (isSilent) => (newValue) => {
         const value = base.get();
         const reducedValue = (0, general_1.isFunction)(newValue) ? newValue(value) : newValue;
         if (((equalityFn && !equalityFn(value, reducedValue)) ||
             value === reducedValue)) {
             return;
         }
-        base.set(reducedValue);
+        isSilent ? base.setSilent(reducedValue) : base.set(reducedValue);
         async_storage_1.default.setItem(name, JSON.stringify(reducedValue));
     };
+    const setSilent = _setInternal(true);
+    const set = _setInternal(false);
     async_storage_1.default.getItem(name).then((value) => {
         if (value) {
             const persisted = JSON.parse(value);
@@ -57,6 +59,7 @@ function createPersistentObservable({ name, initialValue, equalityFn, mergeOnHyd
     const observable = {
         ...base,
         set,
+        setSilent,
         rehydrate,
         reset,
     };

@@ -20,17 +20,18 @@ const createObservable = ({ initialValue, equalityFn, name } = {
     const get = () => value;
     const emit = () => listenerRecords.forEach(({ listener }) => listener === null || listener === void 0 ? void 0 : listener(value));
     const emitError = (err) => listenerRecords.forEach(({ onError }) => onError === null || onError === void 0 ? void 0 : onError(err));
-    const set = (newValue, forceEmit = false) => {
+    const _setInternal = (isSilent) => (newValue) => {
         const reducedValue = ((0, general_1.isFunction)(newValue) ? newValue(get()) : newValue);
-        if (!forceEmit &&
-            ((equalityFn &&
-                !equalityFn(value, reducedValue)) ||
-                value === reducedValue)) {
+        if (((equalityFn &&
+            !equalityFn(value, reducedValue)) ||
+            value === reducedValue)) {
             return;
         }
         value = reducedValue;
-        emit();
+        isSilent && emit();
     };
+    const set = _setInternal(true);
+    const setSilent = _setInternal(false);
     const subscribe = (listener, onError) => {
         const id = react_native_uuid_1.default.v4();
         listenerRecords.push({ listener, onError, id });
@@ -175,6 +176,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
     const observable = {
         get,
         set,
+        setSilent,
         subscribe,
         subscribeWithValue,
         stream,

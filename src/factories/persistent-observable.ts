@@ -40,7 +40,7 @@ export function createPersistentObservable<T>({
 
   const base = createObservable({ initialValue, name })
 
-  const set: ObservableSetter<T> = (newValue) => {
+  const _setInternal = (isSilent:boolean): ObservableSetter<T> => (newValue) => {
     const value = base.get()
     const reducedValue = isFunction(newValue) ? newValue(value) : newValue
 
@@ -51,9 +51,12 @@ export function createPersistentObservable<T>({
       return
     }
 
-    base.set(reducedValue)
+    isSilent ? base.setSilent(reducedValue) : base.set(reducedValue)
     AsyncStorage.setItem(name, JSON.stringify(reducedValue))
   }
+
+  const setSilent: ObservableSetter<T> = _setInternal(true)
+  const set: ObservableSetter<T> = _setInternal(false)
 
   AsyncStorage.getItem(name).then((value) => {
     if (value) {
@@ -83,6 +86,7 @@ export function createPersistentObservable<T>({
   const observable = {
     ...base,
     set,
+    setSilent,
     rehydrate,
     reset,
   }

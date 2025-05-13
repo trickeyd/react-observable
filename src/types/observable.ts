@@ -5,8 +5,7 @@ export type ObservableGetter<T> = () => Readonly<T>
 
 /** @internal */
 export type ObservableSetter<T> = (
-  newValue: T | ((currentValue: Readonly<T>) => T),
-  forceEmit?: boolean,
+  newValue: T | Readonly<T> | ((currentValue: Readonly<T>) => T | Readonly<T>),
 ) => void
 
 /** @internal */
@@ -86,6 +85,7 @@ export type GetInitialValueOperator<T> = () => T
 export interface Observable<T> {
   get: ObservableGetter<T>
   set: ObservableSetter<T>
+  setSilent: ObservableSetter<T>
   subscribe: SubscribeFunction<T>
   subscribeWithValue: SubscribeFunction<T>
   stream: StreamProjection<T, false>
