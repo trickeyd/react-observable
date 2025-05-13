@@ -14,7 +14,7 @@ export function useObservable<
     store: Store,
     wrapObservable: <T = unknown>(observable: Observable<T>) => Observable<T>
   }) => O
-): Readonly<ObservableValue<O>> {
+): ObservableValue<O> {
   const ref = useRef<O | undefined>(undefined)
   const subscriptionsRef = useRef<(() => void)[]>([])
 
@@ -35,10 +35,10 @@ export function useObservable<
     })
   }
 
-  const [data, setData] = useState<Readonly<ObservableValue<O>>>(ref.current.get())
+  const [data, setData] = useState<ObservableValue<O>>(ref.current.get())
 
   useEffect(() => {
-    const sub = ref.current?.subscribe((newData: Readonly<ObservableValue<O>>) => {
+    const sub = ref.current?.subscribe((newData: ObservableValue<O>) => {
       setData(newData)
     })
 
