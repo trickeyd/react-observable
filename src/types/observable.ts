@@ -86,7 +86,9 @@ export interface Observable<T> {
   subscribeWithValue: SubscribeFunction<T>
   stream: StreamProjection<T, false>
   streamAsync: StreamProjection<T, true>
-  combineLatestFrom: CombineLatestFromOperator<T>
+  combineLatestFrom: <U extends unknown[]>(
+    ...observables: { [K in keyof U]: Observable<U[K]> }
+  ) => Observable<[T, ...{ [K in keyof U]: U[K] }]>
   withLatestFrom: <OtherT extends unknown[]>(
     ...observables: [...{ [K in keyof OtherT]: Observable<OtherT[K]> }]
   ) => Observable<[T, ...{ [K in keyof OtherT]: OtherT[K] }]>

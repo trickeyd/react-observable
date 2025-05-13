@@ -89,10 +89,11 @@ export const createObservable = <T extends unknown>(
     listenerRecords = listenerRecords.filter((lr) => lr.id !== id)
   }
 
-  const combineLatestFrom: CombineLatestFromOperator<T> = <U extends unknown[]>(
+  const combineLatestFrom = <U extends unknown[]>(
     ...observables: { [K in keyof U]: Observable<U[K]> }
   ) => {
     type CombinedValues = [T, ...U]
+
 
     const { initialValues, subscribeFunctions } = observables.reduce<{
       initialValues: CombinedValues
