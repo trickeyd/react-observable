@@ -11,7 +11,7 @@ export interface StreamOption<T = unknown> {
     streamedName?: string;
     executeOnCreation?: boolean;
 }
-export type StreamProjection<T, IsAsync extends boolean = false> = <NewT = unknown>(project: (data: Readonly<T>) => IsAsync extends true ? Promise<NewT> : NewT, options?: StreamOption<NewT>) => Observable<NewT>;
+export type StreamProjection<T, IsAsync extends boolean = false> = <NewT = unknown>(project: (data: T) => IsAsync extends true ? Promise<NewT> : NewT, options?: StreamOption<NewT>) => Observable<NewT>;
 /** @internal */
 export type CombineLatestFromOperator<T, U extends unknown[] = unknown[]> = <NewT = unknown>(...observables: {
     [K in keyof U]: Observable<U[K]>;

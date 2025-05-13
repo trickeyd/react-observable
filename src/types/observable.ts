@@ -22,7 +22,7 @@ export interface StreamOption<T = unknown> {
 }
 
 export type StreamProjection<T, IsAsync extends boolean = false> = <NewT = unknown>(
-  project: (data: Readonly<T>) => IsAsync extends true ? Promise<NewT> : NewT,
+  project: (data: T) => IsAsync extends true ? Promise<NewT> : NewT,
   options?: StreamOption<NewT>,
 ) => Observable<NewT>
 

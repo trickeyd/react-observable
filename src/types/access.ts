@@ -10,16 +10,22 @@ type DeepMutable<T> = T extends (infer R)[]
     ? { -readonly [K in keyof T]: DeepMutable<T[K]> }
     : T
 
+export type Readonly<T> = T
 // General type
+/*
 export type Readonly<T> = T extends (infer R)[]
 ? DeepReadonlyArray<R>
 : T extends object
   ? DeepReadonlyObject<T>
   : T
+*/
 
+export type Safe<T> = T
 // Allow either mutable or readonly at any level
+/*
 export type Safe<T> = T extends (infer R)[]
   ? Safe<R>[] | DeepReadonlyArray<R> | DeepMutable<R>[] | R[]
   : T extends object
     ? { [K in keyof T]: Safe<T[K]> }
     : T
+*/

@@ -20,7 +20,7 @@ import {
   MapEntriesOperator,
   GetInitialValueOperator,
 } from '../types/observable'
-import { Readonly, Safe } from '../types/access'
+import { Readonly } from '../types/access'
 
 export const createObservable = <T extends unknown>(
   { initialValue, equalityFn, name }: CreateObservableParams<T> = {
@@ -118,7 +118,7 @@ export const createObservable = <T extends unknown>(
         (val: U[keyof U]) => {
           combinationObservable$.set((values) => {
             const clone = [...values]
-            clone[i] = val
+            clone[i] = val as CombinedValues[number]
             return clone as CombinedValues
           })
         },
@@ -142,7 +142,7 @@ export const createObservable = <T extends unknown>(
     })
 
     subscribe(
-      (sourceValue: Safe<T>) => {
+      (sourceValue: Readonly<T>) => {
         const combined = [
           sourceValue,
           ...observables.map((obs) => obs.get()),
