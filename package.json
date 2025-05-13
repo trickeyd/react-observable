@@ -11,7 +11,8 @@
     "test": "jest",
     "lint": "eslint src --ext .ts,.tsx",
     "build": "tsc",
-    "prepare": "yarn build"
+    "prepare": "yarn build",
+    "postinstall": "yarn build"
   },
   "files": [
     "dist"
