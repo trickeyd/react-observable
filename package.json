@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "State management control layer for React projects",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,7 +11,8 @@
     "test": "jest",
     "lint": "eslint src --ext .ts,.tsx",
     "build": "tsc",
-    "prepare": "yarn build"
+    "prepare": "yarn build",
+    "postinstall": "yarn build"
   },
   "files": [
     "dist"
