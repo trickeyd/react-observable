@@ -33,7 +33,7 @@ export type CombineLatestFromOperator<T, U extends unknown[] = unknown[]> = <New
 
 /** @internal */
 export type WithLatestFromOperator<T, U extends unknown[] = unknown[]> = <NewT = unknown>(
-  ...observables: Observable<U>[]
+  ...observables: { [K in keyof U]: Observable<U[K]> }
 ) => Observable<[T, ...U]>
 
 /** @internal */

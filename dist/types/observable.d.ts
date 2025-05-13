@@ -17,7 +17,9 @@ export type CombineLatestFromOperator<T, U extends unknown[] = unknown[]> = <New
     [K in keyof U]: Observable<U[K]>;
 }) => Observable<[T, ...U]>;
 /** @internal */
-export type WithLatestFromOperator<T, U extends unknown[] = unknown[]> = <NewT = unknown>(...observables: Observable<U>[]) => Observable<[T, ...U]>;
+export type WithLatestFromOperator<T, U extends unknown[] = unknown[]> = <NewT = unknown>(...observables: {
+    [K in keyof U]: Observable<U[K]>;
+}) => Observable<[T, ...U]>;
 /** @internal */
 export type TapOperator<T> = (callback: (currentValue: Readonly<T>) => void) => Observable<T>;
 /** @internal */
