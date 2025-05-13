@@ -18,8 +18,8 @@ export function ReactObservableProvider({
   loading = null,
 }: Props) {
   const [isLoaded, setIsLoaded] = useState(false)
-  const flatStore = useObservable<FlatStore>(() => flatStore$)
-  const store = useObservable<Store>(() => store$)
+  const flatStore = useObservable(() => flatStore$)
+  const store = useObservable(() => store$)
 
   // Duck-type filter the persistent ones
   const persistentObservables = Object.values(flatStore).filter(

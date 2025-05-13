@@ -5,19 +5,15 @@ import { useStoreProxy } from './use-store-proxy'
 import { wrapObservable } from '../utils/stream'
 import { Store } from '../types/store'
 
-export const useObservable = <ReturnT = any>(
-  initialise: (
-    {
-      store,
-      wrapObservable,
-    }:
-    {
-      store: Store,
-      wrapObservable: <T extends unknown = unknown>(observable: Observable<T>) => Observable<T>
-    }
-  ) => Observable<ReturnT>,
-): Readonly<ReturnT> => {
-  const ref = useRef<Observable<ReturnT> | undefined>(undefined)
+export function useObservable<
+  O extends Observable<any>
+>(
+  initialise: (args: {
+    store: Store,
+    wrapObservable: <T = unknown>(observable: Observable<T>) => Observable<T>
+  }) => O
+): Readonly<ReturnType<O['get']>> {
+  const ref = useRef<O | undefined>(undefined)
   const subscriptionsRef = useRef<(() => void)[]>([])
 
   const handleSubscription = useCallback((unsubscribe: () => void) => {
@@ -26,7 +22,7 @@ export const useObservable = <ReturnT = any>(
 
   const observableStoreProxy = useStoreProxy(handleSubscription)
 
-  const handleWrapObservable = useCallback(<T extends unknown = unknown>(observable: Observable<T>) => {
+  const handleWrapObservable = useCallback(<T = unknown>(observable: Observable<T>) => {
     return wrapObservable<T>(observable, handleSubscription)
   }, [])
 
@@ -37,10 +33,10 @@ export const useObservable = <ReturnT = any>(
     })
   }
 
-  const [data, setData] = useState<Readonly<ReturnT>>(ref.current.get())
+  const [data, setData] = useState<Readonly<ReturnType<O['get']>>>(ref.current.get())
 
   useEffect(() => {
-    const sub = ref.current?.subscribe((newData: Readonly<ReturnT>) => {
+    const sub = ref.current?.subscribe((newData: Readonly<ReturnType<O['get']>>) => {
       setData(newData)
     })
 

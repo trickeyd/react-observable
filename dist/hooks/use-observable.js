@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.useObservable = void 0;
+exports.useObservable = useObservable;
 const react_1 = require("react");
 const use_store_proxy_1 = require("./use-store-proxy");
 const stream_1 = require("../utils/stream");
-const useObservable = (initialise) => {
+function useObservable(initialise) {
     const ref = (0, react_1.useRef)(undefined);
     const subscriptionsRef = (0, react_1.useRef)([]);
     const handleSubscription = (0, react_1.useCallback)((unsubscribe) => {
@@ -33,5 +33,4 @@ const useObservable = (initialise) => {
         };
     }, []);
     return data;
-};
-exports.useObservable = useObservable;
+}
