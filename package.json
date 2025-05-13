@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "State management control layer for React projects",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,8 +11,7 @@
     "test": "jest",
     "lint": "eslint src --ext .ts,.tsx",
     "build": "tsc",
-    "prepare": "yarn build",
-    "postinstall": "yarn build"
+    "prepare": "yarn build"
   },
   "files": [
     "dist"
@@ -21,22 +20,20 @@
   "license": "MIT",
   "private": false,
   "dependencies": {
-    "@react-native-async-storage/async-storage": "^1.21.0",
-    "react": "^18.2.0",
     "react-native-uuid": "^2.0.0"
   },
   "devDependencies": {
+    "@react-native-async-storage/async-storage": "^2.1.2",
     "@types/react": "^19.1.4",
     "@types/react-native-uuid": "^2.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.0.0",
     "prettier": "^3.5.3",
+    "react": "^19.1.0",
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
-    "@react-native-async-storage/async-storage": ">=1.0.0",
-    "@types/react": "^16.8.0",
-    "react": ">=16.8.0"
+    "@types/react": "^17"
   }
 }
