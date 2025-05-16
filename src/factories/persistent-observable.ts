@@ -32,15 +32,15 @@ export function createPersistentObservable<T>({
   equalityFn,
   mergeOnHydration = defaultMergeOnHydration,
 }: CreatePersistentObservableParams<T>): Observable<T> {
-  if (!name) {
-    throw new Error('Persistent observables require a name')
-  }
-  let _rehydrateIsComplete = false
-  let _resolveRehydrate: (() => void) | undefined
+
 
   const base = createObservable({ initialValue, name })
 
   const _setInternal = (isSilent:boolean): ObservableSetter<T> => (newValue) => {
+    const observableName = base.getName()
+    if(!observableName || observableName === base.getId()) {
+      throw new Error('Persistent observable name is required for set.')
+    }
     const value = base.get()
     const reducedValue = isFunction(newValue) ? newValue(value) : newValue
 
@@ -52,34 +52,34 @@ export function createPersistentObservable<T>({
     }
 
     isSilent ? base.setSilent(reducedValue) : base.set(reducedValue)
-    AsyncStorage.setItem(name, JSON.stringify(reducedValue))
+    AsyncStorage.setItem(observableName, JSON.stringify(reducedValue))
   }
 
   const setSilent: ObservableSetter<T> = _setInternal(true)
   const set: ObservableSetter<T> = _setInternal(false)
 
-  AsyncStorage.getItem(name).then((value) => {
-    if (value) {
-      const persisted = JSON.parse(value) as T
-      const data = mergeOnHydration
-        ? mergeOnHydration(base.getInitialValue(), persisted)
-        : persisted
-      base.set(data)
-    }
-    _rehydrateIsComplete = true
-    if (_resolveRehydrate) {
-      _resolveRehydrate()
-    }
-  })
 
   const rehydrate = (): Promise<void> =>
-    new Promise((resolve) => {
-      if (_rehydrateIsComplete) {
-        resolve()
-      } else {
-        _resolveRehydrate = resolve
+    new Promise((resolve, reject) => {
+      const observableName = base.getName()
+      if(!observableName || observableName === base.getId()) {
+        reject(new Error('Persistent observable name is required for rehydration.'))
       }
-    })
+      try {
+        AsyncStorage.getItem(observableName).then((value) => {
+          if (value) {
+            const persisted = JSON.parse(value) as T
+          const data = mergeOnHydration
+            ? mergeOnHydration(base.getInitialValue(), persisted)
+            : persisted
+          base.set(data)
+        }
+        resolve()
+      })
+    } catch (error) {
+      reject(error)
+    }
+  })
 
   const reset = () => set(base.getInitialValue())
 

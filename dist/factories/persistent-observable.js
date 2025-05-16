@@ -16,13 +16,12 @@ const defaultMergeOnHydration = (initialValue, persisted) => {
     return { ...initialValue, ...(persisted !== null && persisted !== void 0 ? persisted : {}) };
 };
 function createPersistentObservable({ name, initialValue, equalityFn, mergeOnHydration = defaultMergeOnHydration, }) {
-    if (!name) {
-        throw new Error('Persistent observables require a name');
-    }
-    let _rehydrateIsComplete = false;
-    let _resolveRehydrate;
     const base = (0, observable_1.createObservable)({ initialValue, name });
     const _setInternal = (isSilent) => (newValue) => {
+        const observableName = base.getName();
+        if (!observableName || observableName === base.getId()) {
+            throw new Error('Persistent observable name is required for set.');
+        }
         const value = base.get();
         const reducedValue = (0, general_1.isFunction)(newValue) ? newValue(value) : newValue;
         if (((equalityFn && !equalityFn(value, reducedValue)) ||
@@ -30,29 +29,29 @@ function createPersistentObservable({ name, initialValue, equalityFn, mergeOnHyd
             return;
         }
         isSilent ? base.setSilent(reducedValue) : base.set(reducedValue);
-        async_storage_1.default.setItem(name, JSON.stringify(reducedValue));
+        async_storage_1.default.setItem(observableName, JSON.stringify(reducedValue));
     };
     const setSilent = _setInternal(true);
     const set = _setInternal(false);
-    async_storage_1.default.getItem(name).then((value) => {
-        if (value) {
-            const persisted = JSON.parse(value);
-            const data = mergeOnHydration
-                ? mergeOnHydration(base.getInitialValue(), persisted)
-                : persisted;
-            base.set(data);
+    const rehydrate = () => new Promise((resolve, reject) => {
+        const observableName = base.getName();
+        if (!observableName || observableName === base.getId()) {
+            reject(new Error('Persistent observable name is required for rehydration.'));
         }
-        _rehydrateIsComplete = true;
-        if (_resolveRehydrate) {
-            _resolveRehydrate();
+        try {
+            async_storage_1.default.getItem(observableName).then((value) => {
+                if (value) {
+                    const persisted = JSON.parse(value);
+                    const data = mergeOnHydration
+                        ? mergeOnHydration(base.getInitialValue(), persisted)
+                        : persisted;
+                    base.set(data);
+                }
+                resolve();
+            });
         }
-    });
-    const rehydrate = () => new Promise((resolve) => {
-        if (_rehydrateIsComplete) {
-            resolve();
-        }
-        else {
-            _resolveRehydrate = resolve;
+        catch (error) {
+            reject(error);
         }
     });
     const reset = () => set(base.getInitialValue());
