@@ -36,22 +36,34 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReactObservableContext = void 0;
 exports.ReactObservableProvider = ReactObservableProvider;
 const react_1 = __importStar(require("react"));
-const use_observable_1 = require("../hooks/use-observable");
 const createStore_1 = require("./createStore");
 /** @internal */
 exports.ReactObservableContext = (0, react_1.createContext)(null);
 function ReactObservableProvider({ children, loading = null, }) {
-    const [isLoaded, setIsLoaded] = (0, react_1.useState)(false);
-    const flatStore = (0, use_observable_1.useObservable)(() => createStore_1.flatStore$);
-    const store = (0, use_observable_1.useObservable)(() => createStore_1.store$);
-    // Duck-type filter the persistent ones
-    const persistentObservables = Object.values(flatStore).filter((ob) => !!ob.rehydrate);
+    const [store, setStore] = (0, react_1.useState)(null);
+    const isRehydrating = (0, react_1.useRef)(false);
     (0, react_1.useEffect)(() => {
-        const setStateWhenComplete = async () => {
-            await Promise.all(persistentObservables.map((observable) => !!observable.rehydrate()));
-            setIsLoaded(true);
-        };
-        setStateWhenComplete();
-    }, []);
-    return (react_1.default.createElement(exports.ReactObservableContext.Provider, { value: store }, isLoaded ? children : loading));
+        if (store || isRehydrating.current)
+            return;
+        return createStore_1.store$.subscribeWithValue((incomingStore) => {
+            isRehydrating.current = true;
+            Promise.all(Object.values(incomingStore).reduce((acc, segment) => {
+                return [
+                    ...acc,
+                    ...Object.values(segment).map((observable) => {
+                        // Duck-type filter the persistent ones
+                        if (!!observable.rehydrate) {
+                            return observable.rehydrate();
+                        }
+                        return Promise.resolve(false);
+                    })
+                ];
+            }, []))
+                .then(() => {
+                setStore(incomingStore);
+                isRehydrating.current = false;
+            });
+        });
+    }, [store]);
+    return (react_1.default.createElement(exports.ReactObservableContext.Provider, { value: store }, !!store ? children : loading));
 }
