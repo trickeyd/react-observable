@@ -252,7 +252,7 @@ export const createObservable = <T extends unknown>(
   } = {}) => {
     const currentValue = get()
     if (!isObject(currentValue)) {
-      throw new Error('mapEntries can only be used on object observables')
+      throw new Error(`mapEntries can only be used on object observables: ${getName()} is a ${typeof currentValue}`)
     }
 
     const entries = Object.entries(currentValue as object)
@@ -311,6 +311,7 @@ export const createObservable = <T extends unknown>(
     subscribeWithValue,
     stream,
     streamAsync,
+    // TODO- this is not currently type safe
     combineLatestFrom,
     withLatestFrom,
     tap,

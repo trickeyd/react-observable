@@ -39,6 +39,8 @@ export const createStream = <ReturnT, InputT = undefined>(
       $: entry$ as Observable<InputT>,
       store: store as Store,
     })
+    // TODO- need to check if it already exists for 
+    // items that are loaded later
     stream$.subscribe((val) => exit$.set(val as ReturnT), exit$.emitError)
     unSubMain()
   })

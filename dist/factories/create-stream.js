@@ -15,6 +15,8 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
             $: entry$,
             store: store,
         });
+        // TODO- need to check if it already exists for 
+        // items that are loaded later
         stream$.subscribe((val) => exit$.set(val), exit$.emitError);
         unSubMain();
     });
