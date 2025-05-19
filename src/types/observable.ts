@@ -27,12 +27,6 @@ export type StreamProjection<T, IsAsync extends boolean = false> = <NewT = unkno
 ) => Observable<NewT>
 
 /** @internal */
-export type CombineLatestFromOperator<T, U extends unknown[] = unknown[]> = <NewT = unknown>(
-  ...observables: { [K in keyof U]: Observable<U[K]> }
-) => Observable<[T, ...U]>
-
-
-/** @internal */
 export type TapOperator<T> = (
   callback: (currentValue: Readonly<T>) => void,
 ) => Observable<T>
@@ -83,6 +77,7 @@ export interface Observable<T> {
   set: ObservableSetter<T>
   setSilent: ObservableSetter<T>
   subscribe: SubscribeFunction<T>
+  subscribeOnce: SubscribeFunction<T>
   subscribeWithValue: SubscribeFunction<T>
   stream: StreamProjection<T, false>
   streamAsync: StreamProjection<T, true>
@@ -116,6 +111,7 @@ export interface ListenerRecord<T> {
   listener?: (value: Readonly<T>) => void
   onError?: (error: Error) => void
   id: string
+  once?: boolean
 }
 
 export interface PersistentObservable<T> extends Observable<T> {

@@ -48,16 +48,16 @@ export const createStream = <ReturnT, InputT = undefined>(
     new Promise((resolve) => {
 
       const run = () => {
-        const unsub = exit$.subscribe(
+        const unsubscribe = exit$.subscribe(
           (data) => {
             resolve([data as ReturnT, undefined])
-            unsub()
+            unsubscribe()
           },
   
           (error) => {
             onError && onError(error)
             resolve([undefined, error])
-            unsub()
+            unsubscribe()
           },
         )
         if(payload){

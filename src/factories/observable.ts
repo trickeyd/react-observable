@@ -1,4 +1,4 @@
-import { identity, isFunction, isObject } from '../utils/general'
+import { isFunction, isObject } from '../utils/general'
 import uuid from 'react-native-uuid'
 import { tryCatch, tryCatchSync } from '../utils/general'
 import { createStreamName } from '../utils/stream'
@@ -15,7 +15,6 @@ import {
   ObservableGetter,
   EmitErrorOperator,
   UnsubscribeFunction,
-  CombineLatestFromOperator,
   TapOperator,
   MapEntriesOperator,
   GetInitialValueOperator,
@@ -39,12 +38,15 @@ export const createObservable = <T extends unknown>(
 
   const get: ObservableGetter<T> = (): Readonly<T> => value as Readonly<T>
 
-  const emit: EmitOperator = () =>
-    listenerRecords.forEach(({ listener }) =>
-      listener?.(value as Readonly<T>),
-    )
+  const emit: EmitOperator = () => {
+    const unsubscribeIds = listenerRecords.reduce<string[]>((acc, { listener, once, id }) => {
+      listener?.(value as Readonly<T>)
+      return once ? [...acc, id] : acc
+    }, [] as string[])
+    unsubscribeIds.forEach((id) => unsubscribe(id))
+  }
 
-  const emitError: EmitErrorOperator = (err: Error) =>
+  const emitError: EmitErrorOperator = (err: Error) => 
     listenerRecords.forEach(({ onError }) => onError?.(err))
 
   const _setInternal= (isSilent:boolean): ObservableSetter<T> => (newValue) => {
@@ -73,7 +75,13 @@ export const createObservable = <T extends unknown>(
 
   const subscribe: SubscribeFunction<T> = (listener, onError) => {
     const id = uuid.v4() as string
-    listenerRecords.push({ listener, onError, id })
+    listenerRecords.push({ listener, onError, id, once: false })
+    return () => unsubscribe(id)
+  }
+
+  const subscribeOnce: SubscribeFunction<T> = (listener, onError) => {
+    const id = uuid.v4() as string
+    listenerRecords.push({ listener, onError, id, once: true })
     return () => unsubscribe(id)
   }
 
@@ -308,6 +316,7 @@ export const createObservable = <T extends unknown>(
     set,
     setSilent,
     subscribe,
+    subscribeOnce,
     subscribeWithValue,
     stream,
     streamAsync,
