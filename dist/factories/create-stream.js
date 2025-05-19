@@ -20,13 +20,13 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
     };
     const execute = (payload) => new Promise((resolve) => {
         const run = () => {
-            const unsub = exit$.subscribe((data) => {
+            const unsubscribe = exit$.subscribe((data) => {
                 resolve([data, undefined]);
-                unsub();
+                unsubscribe();
             }, (error) => {
                 onError && onError(error);
                 resolve([undefined, error]);
-                unsub();
+                unsubscribe();
             });
             if (payload) {
                 entry$.setSilent(payload);

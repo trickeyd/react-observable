@@ -18,7 +18,13 @@ const createObservable = ({ initialValue, equalityFn, name } = {
     const getInitialValue = () => (0, general_1.isFunction)(initialValue) ? initialValue() : initialValue;
     let value = getInitialValue();
     const get = () => value;
-    const emit = () => listenerRecords.forEach(({ listener }) => listener === null || listener === void 0 ? void 0 : listener(value));
+    const emit = () => {
+        const unsubscribeIds = listenerRecords.reduce((acc, { listener, once, id }) => {
+            listener === null || listener === void 0 ? void 0 : listener(value);
+            return once ? [...acc, id] : acc;
+        }, []);
+        unsubscribeIds.forEach((id) => unsubscribe(id));
+    };
     const emitError = (err) => listenerRecords.forEach(({ onError }) => onError === null || onError === void 0 ? void 0 : onError(err));
     const _setInternal = (isSilent) => (newValue) => {
         const reducedValue = ((0, general_1.isFunction)(newValue) ? newValue(get()) : newValue);
@@ -34,7 +40,12 @@ const createObservable = ({ initialValue, equalityFn, name } = {
     const setSilent = _setInternal(false);
     const subscribe = (listener, onError) => {
         const id = react_native_uuid_1.default.v4();
-        listenerRecords.push({ listener, onError, id });
+        listenerRecords.push({ listener, onError, id, once: false });
+        return () => unsubscribe(id);
+    };
+    const subscribeOnce = (listener, onError) => {
+        const id = react_native_uuid_1.default.v4();
+        listenerRecords.push({ listener, onError, id, once: true });
         return () => unsubscribe(id);
     };
     const subscribeWithValue = (listener, onError) => {
@@ -178,6 +189,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
         set,
         setSilent,
         subscribe,
+        subscribeOnce,
         subscribeWithValue,
         stream,
         streamAsync,
