@@ -41,6 +41,7 @@ export const createStream = <ReturnT, InputT = undefined>(
       $: entry$ as Observable<InputT>,
       store: store as Store,
     })
+
     stream$.subscribe((val) => exit$.set(val as ReturnT), exit$.emitError)
   }
 
@@ -48,23 +49,21 @@ export const createStream = <ReturnT, InputT = undefined>(
     new Promise((resolve) => {
 
       const run = () => {
-        const unsubscribe = exit$.subscribe(
+        exit$.subscribe(
           (data) => {
             resolve([data as ReturnT, undefined])
-            unsubscribe()
           },
   
           (error) => {
             onError && onError(error)
             resolve([undefined, error])
-            unsubscribe()
           },
         )
         if(payload){
           entry$.setSilent(payload)
-        }else{
-          entry$.emit()
         }
+        entry$.emit()
+        
       }
 
       if(isInitialised.get()){
