@@ -27,6 +27,8 @@ export const createStream = <ReturnT, InputT = undefined>(
 } => {
   const entry$ = createObservable<InputT>({ initialValue: undefined })
   const exit$ = createObservable<ReturnT>({ initialValue })
+  const isInitialised = createObservable<boolean>({ initialValue: false })
+
 
   if (result$) {
     // we don't really need to pass the error on to the result
@@ -34,36 +36,51 @@ export const createStream = <ReturnT, InputT = undefined>(
   }
   
 
-  const unSubMain = store$.subscribe((store: Safe<Store>) => {
+  const initialiseStream = (store: Safe<Store>) => {
     const stream$: Observable<ReturnT> = initialise({
       $: entry$ as Observable<InputT>,
       store: store as Store,
     })
-    // TODO- need to check if it already exists for 
-    // items that are loaded later
     stream$.subscribe((val) => exit$.set(val as ReturnT), exit$.emitError)
-    unSubMain()
-  })
+  }
 
   const execute = (payload?: InputT): Promise<ExecuteReturnType<ReturnT>> =>
     new Promise((resolve) => {
-      const unsub = exit$.subscribe(
-        (data) => {
-          resolve([data as ReturnT, undefined])
-          unsub()
-        },
 
-        (error) => {
-          onError && onError(error)
-          resolve([undefined, error])
-          unsub()
-        },
-      )
-      if(payload){
-        entry$.setSilent(payload)
-      }else{
-        entry$.emit()
+      const run = () => {
+        const unsub = exit$.subscribe(
+          (data) => {
+            resolve([data as ReturnT, undefined])
+            unsub()
+          },
+  
+          (error) => {
+            onError && onError(error)
+            resolve([undefined, error])
+            unsub()
+          },
+        )
+        if(payload){
+          entry$.setSilent(payload)
+        }else{
+          entry$.emit()
+        }
       }
+
+      if(isInitialised.get()){
+        run()
+      }else{
+        if(!!store$.get()){
+          initialiseStream(store$.get())
+          run()
+        } else {
+          store$.subscribe((store: Safe<Store>) => {
+            initialiseStream(store)
+            run()
+          })
+        }
+      }
+   
     })
   execute.exit$ = exit$
   return execute
