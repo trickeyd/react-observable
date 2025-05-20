@@ -166,6 +166,36 @@ const safe$ = counter$.catchError((error, currentValue, setter) => {
 
 ## API Reference
 
+### Type Augmentations
+
+To use type augmentations with the library, you'll need to:
+
+1. Create a type declaration file (e.g., `src/types/augmentations/react-observable.d.ts`):
+```typescript
+declare module '@idiosync/react-observable' {
+  // Your type augmentations here
+}
+```
+
+2. Add the path to your `tsconfig.json`:
+```json
+{
+  "compilerOptions": {
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types/augmentations"
+    ]
+  }
+}
+```
+
+3. Import the type declarations in your app's entry point (e.g., `index.js` or `index.ts`):
+```typescript
+import './src/types/augmentations/react-observable.d'
+```
+
+This allows you to extend the library's types while maintaining type safety.
+
 ### createObservable
 
 Creates a new observable with the given configuration.
