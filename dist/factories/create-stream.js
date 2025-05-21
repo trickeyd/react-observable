@@ -23,6 +23,7 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
             exit$.subscribe((data) => {
                 resolve([data, undefined]);
             }, (error) => {
+                console.log('stream execute - error', error);
                 onError && onError(error);
                 resolve([undefined, error]);
             });

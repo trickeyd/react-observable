@@ -55,6 +55,7 @@ export const createStream = <ReturnT, InputT = undefined>(
           },
   
           (error) => {
+            console.log('stream execute - error', error)
             onError && onError(error)
             resolve([undefined, error])
           },
