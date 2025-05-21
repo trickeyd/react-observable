@@ -168,18 +168,16 @@ const createObservable = ({ initialValue, equalityFn, name } = {
         }), {});
     };
     const catchError = (onError) => {
-        const newObservable$ = (0, exports.createObservable)({
-            name: `${name}_catchError`,
-        });
         const handleError = (error) => {
             if (onError) {
-                onError(error, get(), newObservable$.setSilent);
+                onError(error, get(), set);
             }
-            // The error is caught and the stream continues
-            newObservable$.emit();
+            emitError(new Error('Error caught!'));
         };
-        subscribe(newObservable$.set, handleError);
-        return newObservable$;
+        return {
+            ...observable,
+            emitError: handleError,
+        };
     };
     const guard = (predicate) => {
         // Create a new observable for the guarded stream

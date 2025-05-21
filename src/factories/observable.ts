@@ -291,24 +291,17 @@ export const createObservable = <T extends unknown>(
     ) => void,
   ) => {
 
-    const newObservable$ = createObservable<T>({
-      name: `${name}_catchError`,
-    })
-
     const handleError = (error: Error) => {
       if (onError) {
-        onError(error, get() as Readonly<T>, newObservable$.setSilent)
+        onError(error, get() as Readonly<T>, set)
       } 
-      // The error is caught and the stream continues
-      newObservable$.emit()
+      emitError(new Error('Error caught!'))
     }
 
-    subscribe(
-      newObservable$.set,
-      handleError,
-    )
-
-    return newObservable$
+    return {
+      ...observable,
+      emitError: handleError,
+    } as Observable<T>
   }
 
   const guard = (
