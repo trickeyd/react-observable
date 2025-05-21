@@ -3,10 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.shallowEqual = exports.isPlainObject = exports.isObject = exports.isFunction = exports.identity = exports.tryCatchSync = exports.tryCatch = void 0;
 const tryCatch = async (fn, errorMessage) => {
     try {
+        console.log('tryCatch fn in');
         const result = await fn();
+        console.log('tryCatch result', result);
         return [result, undefined];
     }
     catch (error) {
+        console.error('tryCatch error', error);
         const err = error instanceof Error ? error : new Error(String(error));
         if (errorMessage) {
             err.message = `${errorMessage}\n${err.message}`;
