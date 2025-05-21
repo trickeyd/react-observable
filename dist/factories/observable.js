@@ -26,6 +26,12 @@ const createObservable = ({ initialValue, equalityFn, name } = {
         unsubscribeIds.forEach((id) => unsubscribe(id));
     };
     const emitError = (err) => listenerRecords.forEach(({ onError }) => onError === null || onError === void 0 ? void 0 : onError(err));
+    /**
+     * emitComplete notifies all subscribers that the stream has completed successfully.
+     * After calling emitComplete, no further values or errors will be emitted.
+     * Subscribers can provide an onComplete callback to react to stream completion.
+     */
+    const emitComplete = () => listenerRecords.forEach(({ onComplete }) => onComplete === null || onComplete === void 0 ? void 0 : onComplete());
     const _setInternal = (isSilent) => (newValue) => {
         const reducedValue = ((0, general_1.isFunction)(newValue) ? newValue(get()) : newValue);
         if (((equalityFn &&
@@ -38,18 +44,18 @@ const createObservable = ({ initialValue, equalityFn, name } = {
     };
     const set = _setInternal(true);
     const setSilent = _setInternal(false);
-    const subscribe = (listener, onError) => {
+    const subscribe = (listener, onError, onComplete) => {
         const id = react_native_uuid_1.default.v4();
-        listenerRecords.push({ listener, onError, id, once: false });
+        listenerRecords.push({ listener, onError, id, once: false, onComplete });
         return () => unsubscribe(id);
     };
-    const subscribeOnce = (listener, onError) => {
+    const subscribeOnce = (listener, onError, onComplete) => {
         const id = react_native_uuid_1.default.v4();
-        listenerRecords.push({ listener, onError, id, once: true });
+        listenerRecords.push({ listener, onError, id, once: true, onComplete });
         return () => unsubscribe(id);
     };
-    const subscribeWithValue = (listener, onError) => {
-        const unsubscribe = subscribe(listener, onError);
+    const subscribeWithValue = (listener, onError, onComplete) => {
+        const unsubscribe = subscribe(listener, onError, onComplete);
         if (listener) {
             listener(value);
         }
@@ -94,7 +100,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
                 ...observables.map((obs) => obs.get()),
             ];
             resultObservable$.set(combined);
-        }, (err) => resultObservable$.emitError(err));
+        }, resultObservable$.emitError, resultObservable$.emitComplete);
         return resultObservable$;
     };
     const stream = (project, { initialValue, streamedName, executeOnCreation = true, } = {}) => {
@@ -144,7 +150,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
         subscribe(async (val) => {
             await new Promise((r) => setTimeout(r, milliseconds));
             newObservable$.set(val);
-        }, newObservable$.emitError);
+        }, newObservable$.emitError, newObservable$.emitComplete);
         return newObservable$;
     };
     const mapEntries = ({ keys, observablePostfix = '$', } = {}) => {
@@ -170,11 +176,10 @@ const createObservable = ({ initialValue, equalityFn, name } = {
      * - The user-provided onError handler can choose to:
      *   - Throw a new error (for better debugging or to mark a problem section)
      *   - Forward the original error
-     *   - Do nothing, in which case a special ReactObservableError is emitted to ensure the stream completes
+     *   - Do nothing, in which case the stream will complete gracefully via emitComplete
      * - If the user handler throws, that error is emitted downstream.
-     * - If the error is already a ReactObservableError, it is simply passed on.
      *
-     * This design allows liberal use of throws throughout the stream, and helps pinpoint problem sections by allowing custom errors to be thrown at any catchError boundary.
+     * This design allows liberal use of throws throughout the stream, and helps pinpoint problem sections by allowing custom errors to be thrown at any catchError boundary. If the handler does nothing, the stream completes (no longer emits a special error).
      */
     const catchError = (onError) => {
         const newObservable$ = (0, exports.createObservable)({
@@ -182,24 +187,20 @@ const createObservable = ({ initialValue, equalityFn, name } = {
             name: `${name}_catchError`,
         });
         const handleError = (error) => {
-            if (error instanceof Error && error.message.includes('ReactObservableError')) {
-                newObservable$.emitError(error);
-                return;
-            }
             if (onError) {
                 try {
                     onError(error, get(), set);
-                    newObservable$.emitError(new Error('ReactObservableError: Error caught!'));
+                    newObservable$.emitComplete();
                 }
                 catch (err) {
                     newObservable$.emitError(err);
                 }
             }
             else {
-                newObservable$.emitError(new Error('ReactObservableError: Error caught!'));
+                newObservable$.emitComplete();
             }
         };
-        subscribe((val) => newObservable$.set(val), handleError);
+        subscribe((val) => newObservable$.set(val), handleError, newObservable$.emitComplete);
         return newObservable$;
     };
     const guard = (predicate) => {
@@ -215,7 +216,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
                 // The value is not passed through, but an error must be 
                 guardedObservable.emitError(new Error('Guard failed'));
             }
-        });
+        }, guardedObservable.emitError, guardedObservable.emitComplete);
         return guardedObservable;
     };
     const reset = () => set(getInitialValue());
@@ -245,6 +246,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
         getId,
         emit,
         emitError,
+        emitComplete,
         mapEntries,
         getInitialValue,
         guard,

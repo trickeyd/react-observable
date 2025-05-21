@@ -5,7 +5,7 @@ interface Props<ReturnT> {
     initialValue?: ReturnT;
     result$?: Observable<ReturnT>;
 }
-type ExecuteReturnType<T> = [T, undefined] | [undefined, Error];
+type ExecuteReturnType<T> = [T, undefined] | [undefined, Error] | [undefined, undefined];
 export declare const createStream: <ReturnT, InputT = undefined>(initialise: ({ $, store, }: {
     $: Observable<InputT>;
     store: Store;

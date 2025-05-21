@@ -12,6 +12,7 @@ export type ObservableSetter<T> = (
 export type SubscribeFunction<T> = (
   listener?: (value: Readonly<T>) => void,
   onError?: (error: Error) => void,
+  onComplete?: () => void,
 ) => () => void
 
 /** @internal */
@@ -96,6 +97,7 @@ export interface Observable<T> {
   getId: () => string
   emit: EmitOperator
   emitError: EmitErrorOperator
+  emitComplete: () => void
   mapEntries: MapEntriesOperator<T>
   getInitialValue: GetInitialValueOperator<T>
   guard: (
@@ -113,6 +115,7 @@ export interface CreateObservableParams<T> {
 export interface ListenerRecord<T> {
   listener?: (value: Readonly<T>) => void
   onError?: (error: Error) => void
+  onComplete?: () => void
   id: string
   once?: boolean
 }

@@ -25,6 +25,8 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
             }, (error) => {
                 onError && onError(error);
                 resolve([undefined, error]);
+            }, () => {
+                resolve([undefined, undefined]);
             });
             if (payload) {
                 entry$.setSilent(payload);

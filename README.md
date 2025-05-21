@@ -170,7 +170,7 @@ The `catchError` operator allows you to intercept and handle errors in an observ
 
 - Allow you to throw a new error at any catch boundary for better debugging (e.g., to mark a specific problem section of your stream).
 - Forward the original error if you wish.
-- Do nothing, in which case a special `ReactObservableError` is emitted to ensure the stream completes and downstream handlers can continue to propagate errors as needed.
+- Do nothing, in which case the stream will complete gracefully (via `emitComplete`).
 
 This approach enables you to use `throw` liberally throughout your stream logic, and to pinpoint problem sections by throwing custom errors at any `catchError` boundary.
 
@@ -195,8 +195,34 @@ observable
 
 **Notes:**
 - If you throw a new error in the handler, it will be emitted downstream.
-- If you do nothing, a special `ReactObservableError` is emitted to ensure the stream completes.
-- Downstream `catchError` handlers will ignore `ReactObservableError` and pass it on, allowing the stream to complete gracefully.
+- If you do nothing, the stream will complete gracefully (no special error is emitted).
+- Downstream `catchError` handlers will receive only real errors; completion is handled via `onComplete`.
+
+## Stream Completion
+
+You can signal that a stream has finished its work (successfully) using the `emitComplete` method. Subscribers can provide an `onComplete` callback to react to this event. After completion, no further values or errors will be emitted.
+
+### Usage Example
+
+```ts
+const obs$ = createObservable({ initialValue: 0 });
+
+const unsubscribe = obs$.subscribe(
+  value => console.log('Value:', value),
+  error => console.error('Error:', error),
+  () => console.log('Stream completed!')
+);
+
+obs$.set(1);
+obs$.set(2);
+obs$.emitComplete(); // "Stream completed!" is logged
+obs$.set(3); // No effect, stream is closed
+```
+
+**Notes:**
+- `emitComplete` notifies all subscribers that the stream has completed.
+- After completion, the observable will not emit further values or errors.
+- This is useful for resource cleanup and signaling the end of a process.
 
 ## API Reference
 

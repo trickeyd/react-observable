@@ -4,7 +4,7 @@ export type ObservableGetter<T> = () => Readonly<T>;
 /** @internal */
 export type ObservableSetter<T> = (newValue: T | Readonly<T> | ((currentValue: Readonly<T>) => T | Readonly<T>)) => void;
 /** @internal */
-export type SubscribeFunction<T> = (listener?: (value: Readonly<T>) => void, onError?: (error: Error) => void) => () => void;
+export type SubscribeFunction<T> = (listener?: (value: Readonly<T>) => void, onError?: (error: Error) => void, onComplete?: () => void) => () => void;
 /** @internal */
 export interface StreamOption<T = unknown> {
     initialValue?: T;
@@ -65,6 +65,7 @@ export interface Observable<T> {
     getId: () => string;
     emit: EmitOperator;
     emitError: EmitErrorOperator;
+    emitComplete: () => void;
     mapEntries: MapEntriesOperator<T>;
     getInitialValue: GetInitialValueOperator<T>;
     guard: (predicate: (previousValue: Readonly<T>, nextValue: Readonly<T>) => boolean) => Observable<T>;
@@ -78,6 +79,7 @@ export interface CreateObservableParams<T> {
 export interface ListenerRecord<T> {
     listener?: (value: Readonly<T>) => void;
     onError?: (error: Error) => void;
+    onComplete?: () => void;
     id: string;
     once?: boolean;
 }

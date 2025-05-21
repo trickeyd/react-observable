@@ -10,7 +10,7 @@ interface Props<ReturnT> {
   result$?: Observable<ReturnT>
 }
 
-type ExecuteReturnType<T> = [T, undefined] | [undefined, Error]
+type ExecuteReturnType<T> = [T, undefined] | [undefined, Error] | [undefined, undefined]
 
 export const createStream = <ReturnT, InputT = undefined>(
   initialise: ({
@@ -58,6 +58,10 @@ export const createStream = <ReturnT, InputT = undefined>(
             onError && onError(error)
             resolve([undefined, error])
           },
+          
+          () => {
+            resolve([undefined, undefined])
+          }
         )
         if(payload){
           entry$.setSilent(payload)
