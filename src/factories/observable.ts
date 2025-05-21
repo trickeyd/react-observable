@@ -301,6 +301,23 @@ export const createObservable = <T extends unknown>(
     } as Observable<T>
   }
 
+  const guard = (
+    predicate: (previousValue: Readonly<T>, nextValue: Readonly<T>) => boolean,
+  ) => {
+    // Create a new observable for the guarded stream
+    const guardedObservable = createObservable<T>({ initialValue: get() });
+
+    // Subscribe to the original observable
+    observable.subscribe((nextValue) => {
+      const prevValue = guardedObservable.get();
+      if (predicate(prevValue, nextValue)) {
+        guardedObservable.set(nextValue);
+      }
+    });
+
+    return guardedObservable;
+  }
+
   const reset = () => set(getInitialValue() as T)
 
   const getName = () => observableName
@@ -334,6 +351,7 @@ export const createObservable = <T extends unknown>(
     emitError,
     mapEntries,
     getInitialValue,
+    guard,
   }
 
   return observable

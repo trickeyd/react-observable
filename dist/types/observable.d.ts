@@ -67,6 +67,7 @@ export interface Observable<T> {
     emitError: EmitErrorOperator;
     mapEntries: MapEntriesOperator<T>;
     getInitialValue: GetInitialValueOperator<T>;
+    guard: (predicate: (previousValue: Readonly<T>, nextValue: Readonly<T>) => boolean) => Observable<T>;
 }
 export interface CreateObservableParams<T> {
     initialValue?: T | (() => T);

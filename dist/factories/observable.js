@@ -178,6 +178,18 @@ const createObservable = ({ initialValue, equalityFn, name } = {
             emitError: handleError,
         };
     };
+    const guard = (predicate) => {
+        // Create a new observable for the guarded stream
+        const guardedObservable = (0, exports.createObservable)({ initialValue: get() });
+        // Subscribe to the original observable
+        observable.subscribe((nextValue) => {
+            const prevValue = guardedObservable.get();
+            if (predicate(prevValue, nextValue)) {
+                guardedObservable.set(nextValue);
+            }
+        });
+        return guardedObservable;
+    };
     const reset = () => set(getInitialValue());
     const getName = () => observableName;
     const setName = (name) => {
@@ -207,6 +219,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
         emitError,
         mapEntries,
         getInitialValue,
+        guard,
     };
     return observable;
 };
