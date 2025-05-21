@@ -211,6 +211,7 @@ export const createObservable = <T extends unknown>(
     })
 
     const projectToNewObservable = async (data: Readonly<T>) => {
+      console.log('streamAsync - projectToNewObservable - we doing this?')
       const [newData, error] = await tryCatch<NewT>(
         () => project(data),
         `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`,

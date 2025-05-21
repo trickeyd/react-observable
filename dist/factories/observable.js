@@ -121,6 +121,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
             name,
         });
         const projectToNewObservable = async (data) => {
+            console.log('streamAsync - projectToNewObservable - we doing this?');
             const [newData, error] = await (0, general_2.tryCatch)(() => project(data), `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`);
             console.log('streamAsync - projectToNewObservable', newData, error);
             if (error) {
