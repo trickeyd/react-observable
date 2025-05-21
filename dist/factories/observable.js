@@ -121,11 +121,11 @@ const createObservable = ({ initialValue, equalityFn, name } = {
             name,
         });
         const projectToNewObservable = async (data) => {
-            console.log('streamAsync - projectToNewObservable - we doing this?');
+            console.log('streamAsync - projectToNewObservable - we doing this?', getName());
             const [newData, error] = await (0, general_2.tryCatch)(() => project(data), `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`);
-            console.log('streamAsync - projectToNewObservable', newData, error);
+            console.log('streamAsync - projectToNewObservable', newData, error, getName());
             if (error) {
-                console.log('streamAsync - emitError');
+                console.log('streamAsync - emitError', getName());
                 newObservable$.emitError(error);
             }
             else {
@@ -170,8 +170,10 @@ const createObservable = ({ initialValue, equalityFn, name } = {
     const catchError = (onError) => {
         const handleError = (error) => {
             if (onError) {
+                console.log('catchError - onError', getName());
                 onError(error, get(), set);
             }
+            console.log('catchError - emitError', getName());
             emitError(new Error('Error caught!'));
         };
         return {

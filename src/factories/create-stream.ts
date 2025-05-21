@@ -51,11 +51,12 @@ export const createStream = <ReturnT, InputT = undefined>(
       const run = () => {
         exit$.subscribe(
           (data) => {
+            console.log('stream execute completed - data', data)
             resolve([data as ReturnT, undefined])
           },
   
           (error) => {
-            console.log('stream execute - error', error)
+            console.log('stream execute failed - error', error)
             onError && onError(error)
             resolve([undefined, error])
           },

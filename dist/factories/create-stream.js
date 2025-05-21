@@ -21,9 +21,10 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
     const execute = (payload) => new Promise((resolve) => {
         const run = () => {
             exit$.subscribe((data) => {
+                console.log('stream execute completed - data', data);
                 resolve([data, undefined]);
             }, (error) => {
-                console.log('stream execute - error', error);
+                console.log('stream execute failed - error', error);
                 onError && onError(error);
                 resolve([undefined, error]);
             });

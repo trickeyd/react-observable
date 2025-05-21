@@ -211,14 +211,14 @@ export const createObservable = <T extends unknown>(
     })
 
     const projectToNewObservable = async (data: Readonly<T>) => {
-      console.log('streamAsync - projectToNewObservable - we doing this?')
+      console.log('streamAsync - projectToNewObservable - we doing this?', getName())
       const [newData, error] = await tryCatch<NewT>(
         () => project(data),
         `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`,
       )
-      console.log('streamAsync - projectToNewObservable', newData, error)
+      console.log('streamAsync - projectToNewObservable', newData, error, getName())
       if (error) {
-        console.log('streamAsync - emitError')
+        console.log('streamAsync - emitError', getName())
         newObservable$.emitError(error)
       } else {
         newObservable$.set(newData as NewT)
@@ -293,8 +293,10 @@ export const createObservable = <T extends unknown>(
 
     const handleError = (error: Error) => {
       if (onError) {
+        console.log('catchError - onError', getName())
         onError(error, get() as Readonly<T>, set)
       } 
+      console.log('catchError - emitError', getName())
       emitError(new Error('Error caught!'))
     }
 
