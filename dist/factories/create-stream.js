@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createStream = void 0;
 const observable_1 = require("./observable");
 const createStore_1 = require("../store/createStore");
-const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
+const createStream = (initialise, { onError, initialValue, result$, debug = false } = {}) => {
     const entry$ = (0, observable_1.createObservable)({ initialValue: undefined });
     const exit$ = (0, observable_1.createObservable)({ initialValue });
     const isInitialised = (0, observable_1.createObservable)({ initialValue: false });
@@ -20,11 +20,12 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
     };
     const execute = (payload) => new Promise((resolve) => {
         const run = () => {
+            debug && console.log('stream execute - run');
             exit$.subscribe((data) => {
-                console.log('stream execute completed - data', data);
+                debug && console.log('stream execute completed - data', data);
                 resolve([data, undefined]);
             }, (error) => {
-                console.log('stream execute failed - error', error);
+                debug && console.log('stream execute failed - error', error);
                 onError && onError(error);
                 resolve([undefined, error]);
             });

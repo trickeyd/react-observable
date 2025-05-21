@@ -8,6 +8,7 @@ interface Props<ReturnT> {
   onError?: (err: Error) => void
   initialValue?: ReturnT
   result$?: Observable<ReturnT>
+  debug?: boolean
 }
 
 type ExecuteReturnType<T> = [T, undefined] | [undefined, Error]
@@ -20,7 +21,7 @@ export const createStream = <ReturnT, InputT = undefined>(
     $: Observable<InputT>
     store: Store
   }) => Observable<ReturnT>,
-  { onError, initialValue, result$ }: Props<ReturnT> = {},
+  { onError, initialValue, result$, debug = false }: Props<ReturnT> = {},
 ): {
   (payload?: InputT): Promise<ExecuteReturnType<ReturnT>>
   exit$: Observable<ReturnT>
@@ -49,14 +50,15 @@ export const createStream = <ReturnT, InputT = undefined>(
     new Promise((resolve) => {
 
       const run = () => {
+        debug && console.log('stream execute - run')
         exit$.subscribe(
           (data) => {
-            console.log('stream execute completed - data', data)
+            debug && console.log('stream execute completed - data', data)
             resolve([data as ReturnT, undefined])
           },
   
           (error) => {
-            console.log('stream execute failed - error', error)
+            debug && console.log('stream execute failed - error', error)
             onError && onError(error)
             resolve([undefined, error])
           },
