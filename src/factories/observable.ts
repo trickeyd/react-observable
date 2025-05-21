@@ -297,8 +297,10 @@ export const createObservable = <T extends unknown>(
 
     const handleError = (error: Error) => {
       if (onError) {
-        onError(error, get() as Readonly<T>, set)
+        onError(error, get() as Readonly<T>, newObservable$.setSilent)
       } 
+      // The error is caught and the stream continues
+      newObservable$.emit()
     }
 
     subscribe(
@@ -320,6 +322,9 @@ export const createObservable = <T extends unknown>(
       const prevValue = guardedObservable.get();
       if (predicate(prevValue, nextValue)) {
         guardedObservable.set(nextValue);
+      } else {
+        // The value is not passed through, but an error must be 
+        guardedObservable.emitError(new Error('Guard failed'))
       }
     });
 

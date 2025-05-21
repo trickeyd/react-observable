@@ -173,8 +173,10 @@ const createObservable = ({ initialValue, equalityFn, name } = {
         });
         const handleError = (error) => {
             if (onError) {
-                onError(error, get(), set);
+                onError(error, get(), newObservable$.setSilent);
             }
+            // The error is caught and the stream continues
+            newObservable$.emit();
         };
         subscribe(newObservable$.set, handleError);
         return newObservable$;
@@ -187,6 +189,10 @@ const createObservable = ({ initialValue, equalityFn, name } = {
             const prevValue = guardedObservable.get();
             if (predicate(prevValue, nextValue)) {
                 guardedObservable.set(nextValue);
+            }
+            else {
+                // The value is not passed through, but an error must be 
+                guardedObservable.emitError(new Error('Guard failed'));
             }
         });
         return guardedObservable;
