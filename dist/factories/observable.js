@@ -123,16 +123,20 @@ const createObservable = ({ initialValue, equalityFn, name } = {
         const projectToNewObservable = async (data) => {
             console.log('streamAsync - projectToNewObservable - we doing this?', getName());
             const [newData, error] = await (0, general_2.tryCatch)(() => project(data), `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`);
-            console.log('streamAsync - projectToNewObservable', newData, error, getName());
+            console.log('streamAsync - inside projection', newData, error, getName());
             if (error) {
                 console.log('streamAsync - emitError', getName());
                 newObservable$.emitError(error);
             }
             else {
+                console.log('streamAsync - set', getName());
                 newObservable$.set(newData);
             }
         };
-        (executeOnCreation ? subscribeWithValue : subscribe)(projectToNewObservable, newObservable$.emitError);
+        (executeOnCreation ? subscribeWithValue : subscribe)(projectToNewObservable, (err) => {
+            console.log('streamAsync - emitError via subscribe', getName());
+            newObservable$.emitError(err);
+        });
         return newObservable$;
     };
     const tap = (callback) => {
@@ -173,6 +177,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
             name: `${name}_catchError`,
         });
         const handleError = (error) => {
+            console.log('catchError - handleError', getName());
             if (onError) {
                 console.log('catchError - onError', getName());
                 onError(error, get(), set);
