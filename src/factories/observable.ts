@@ -287,6 +287,18 @@ export const createObservable = <T extends unknown>(
     )
   }
 
+  /**
+   * catchError allows you to intercept errors in the observable stream.
+   *
+   * - The user-provided onError handler can choose to:
+   *   - Throw a new error (for better debugging or to mark a problem section)
+   *   - Forward the original error
+   *   - Do nothing, in which case a special ReactObservableError is emitted to ensure the stream completes
+   * - If the user handler throws, that error is emitted downstream.
+   * - If the error is already a ReactObservableError, it is simply passed on.
+   *
+   * This design allows liberal use of throws throughout the stream, and helps pinpoint problem sections by allowing custom errors to be thrown at any catchError boundary.
+   */
   const catchError = (
     onError?: (
       error: Error,
@@ -301,13 +313,22 @@ export const createObservable = <T extends unknown>(
     })
 
     const handleError = (error: Error) => {
-      console.log('catchError - handleError', getName())
+      if(error instanceof Error && error.message.includes('ReactObservableError')) {
+        newObservable$.emitError(error)
+        return
+      }
+
       if (onError) {
-        console.log('catchError - onError', getName())
-        onError(error, get() as Readonly<T>, set)
-      } 
-      console.log('catchError - emitError', getName())
-      newObservable$.emitError(new Error('Error caught!'))
+        try {
+          onError(error, get() as Readonly<T>, set)
+          newObservable$.emitError(new Error('ReactObservableError: Error caught!'))
+        } catch (err) {
+          console.log('catchError - onError - error', err)
+          newObservable$.emitError(err as Error)
+        }
+      } else {
+        newObservable$.emitError(new Error('ReactObservableError: Error caught!'))
+      }
     }
 
     subscribe(

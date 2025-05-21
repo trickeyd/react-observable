@@ -164,6 +164,40 @@ const safe$ = counter$.catchError((error, currentValue, setter) => {
 })
 ```
 
+## Error Handling with `catchError`
+
+The `catchError` operator allows you to intercept and handle errors in an observable stream. Its design is intended to:
+
+- Allow you to throw a new error at any catch boundary for better debugging (e.g., to mark a specific problem section of your stream).
+- Forward the original error if you wish.
+- Do nothing, in which case a special `ReactObservableError` is emitted to ensure the stream completes and downstream handlers can continue to propagate errors as needed.
+
+This approach enables you to use `throw` liberally throughout your stream logic, and to pinpoint problem sections by throwing custom errors at any `catchError` boundary.
+
+### Usage Example
+
+```ts
+observable
+  .streamAsync(async (value) => {
+    if (value < 0) throw new Error('Negative value!');
+    return value * 2;
+  })
+  .catchError((error, currentValue, set) => {
+    // You can throw a new error for this section
+    if (error.message.includes('Negative')) {
+      throw new Error('CustomSectionError: Negative encountered in stream!');
+    }
+    // Or forward the original error
+    throw error;
+    // Or do nothing to suppress and allow the stream to complete
+  });
+```
+
+**Notes:**
+- If you throw a new error in the handler, it will be emitted downstream.
+- If you do nothing, a special `ReactObservableError` is emitted to ensure the stream completes.
+- Downstream `catchError` handlers will ignore `ReactObservableError` and pass it on, allowing the stream to complete gracefully.
+
 ## API Reference
 
 ### Type Augmentations
