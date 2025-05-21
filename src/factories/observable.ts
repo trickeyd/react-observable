@@ -218,6 +218,7 @@ export const createObservable = <T extends unknown>(
       )
       console.log('streamAsync - projectToNewObservable', newData, error)
       if (error) {
+        console.log('streamAsync - emitError')
         newObservable$.emitError(error)
       } else {
         newObservable$.set(newData as NewT)
@@ -226,7 +227,7 @@ export const createObservable = <T extends unknown>(
 
     ;(executeOnCreation ? subscribeWithValue : subscribe)(
       projectToNewObservable,
-      (err: Error) => newObservable$.emitError(err),
+      newObservable$.emitError,
     )
 
     return newObservable$
@@ -289,18 +290,23 @@ export const createObservable = <T extends unknown>(
       setter: ObservableSetter<T>,
     ) => void,
   ) => {
+
+    const newObservable$ = createObservable<T>({
+      name: `${name}_catchError`,
+    })
+
     const handleError = (error: Error) => {
       if (onError) {
         onError(error, get() as Readonly<T>, set)
-      } else {
-        throw error
-      }
+      } 
     }
 
-    return {
-      ...observable,
-      emitError: handleError,
-    } as Observable<T>
+    subscribe(
+      newObservable$.set,
+      handleError,
+    )
+
+    return newObservable$
   }
 
   const guard = (

@@ -8,7 +8,7 @@ export const tryCatch = async <T>(
     console.log('tryCatch result', result)
     return [result, undefined]
   } catch (error) {
-    console.error('tryCatch error', error)
+    console.log('tryCatch error', error)
     const err = error instanceof Error ? error : new Error(String(error))
     if (errorMessage) {
       err.message = `${errorMessage}\n${err.message}`

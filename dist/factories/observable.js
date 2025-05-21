@@ -125,13 +125,14 @@ const createObservable = ({ initialValue, equalityFn, name } = {
             const [newData, error] = await (0, general_2.tryCatch)(() => project(data), `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`);
             console.log('streamAsync - projectToNewObservable', newData, error);
             if (error) {
+                console.log('streamAsync - emitError');
                 newObservable$.emitError(error);
             }
             else {
                 newObservable$.set(newData);
             }
         };
-        (executeOnCreation ? subscribeWithValue : subscribe)(projectToNewObservable, (err) => newObservable$.emitError(err));
+        (executeOnCreation ? subscribeWithValue : subscribe)(projectToNewObservable, newObservable$.emitError);
         return newObservable$;
     };
     const tap = (callback) => {
@@ -167,18 +168,16 @@ const createObservable = ({ initialValue, equalityFn, name } = {
         }), {});
     };
     const catchError = (onError) => {
+        const newObservable$ = (0, exports.createObservable)({
+            name: `${name}_catchError`,
+        });
         const handleError = (error) => {
             if (onError) {
                 onError(error, get(), set);
             }
-            else {
-                throw error;
-            }
         };
-        return {
-            ...observable,
-            emitError: handleError,
-        };
+        subscribe(newObservable$.set, handleError);
+        return newObservable$;
     };
     const guard = (predicate) => {
         // Create a new observable for the guarded stream
