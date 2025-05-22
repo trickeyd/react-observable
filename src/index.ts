@@ -1,5 +1,6 @@
 export * from './types/observable'
 export * from './types/access'
+export * from './utils/general'
 export * from './types/store'
 export * from './factories/observable'
 export * from './store/createStore'

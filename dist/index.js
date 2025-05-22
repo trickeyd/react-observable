@@ -17,6 +17,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReactObservableContext = exports.ReactObservableProvider = exports.createPersistentObservable = exports.createObservable = void 0;
 __exportStar(require("./types/observable"), exports);
 __exportStar(require("./types/access"), exports);
+__exportStar(require("./utils/general"), exports);
 __exportStar(require("./types/store"), exports);
 __exportStar(require("./factories/observable"), exports);
 __exportStar(require("./store/createStore"), exports);
