@@ -162,13 +162,18 @@ const createObservable = ({ initialValue, equalityFn, name } = {
         const filteredEntries = keys
             ? entries.filter(([key]) => keys.includes(key))
             : entries;
-        return filteredEntries.reduce((acc, [key, value]) => ({
-            ...acc,
-            [`${key}${observablePostfix}`]: (0, exports.createObservable)({
+        return filteredEntries.reduce((acc, [key, value]) => {
+            const name = `${getName()}_${key}`;
+            const observable = (0, exports.createObservable)({
                 initialValue: value,
-                name: `${getName()}_${key}`,
-            }),
-        }), {});
+                name,
+            });
+            subscribe((val) => observable.set(val), observable.emitError, observable.emitComplete);
+            return ({
+                ...acc,
+                [`${key}${observablePostfix}`]: observable,
+            });
+        }, {});
     };
     /**
      * catchError allows you to intercept errors in the observable stream.
@@ -214,7 +219,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
             }
             else {
                 // The value is not passed through, but an error must be 
-                guardedObservable.emitError(new Error('Guard failed'));
+                guardedObservable.emitComplete();
             }
         }, guardedObservable.emitError, guardedObservable.emitComplete);
         return guardedObservable;

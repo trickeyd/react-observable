@@ -282,13 +282,25 @@ export const createObservable = <T extends unknown>(
       : entries
 
     return filteredEntries.reduce(
-      (acc, [key, value]) => ({
-        ...acc,
-        [`${key}${observablePostfix}`]: createObservable({
+      (acc, [key, value]) => {
+        const name = `${getName()}_${key}`
+        const observable = createObservable({
           initialValue: value,
-          name: `${getName()}_${key}`,
-        }),
-      }),
+          name,
+        })
+        
+        subscribe(
+          (val) => observable.set(val),
+          observable.emitError,
+          observable.emitComplete
+        )
+
+        return ({
+        ...acc,
+        [`${key}${observablePostfix}`]: observable,
+        })
+      },
+    
       {} as MapEntriesReturn<T, P>,
     )
   }
@@ -352,7 +364,7 @@ export const createObservable = <T extends unknown>(
         guardedObservable.set(nextValue);
       } else {
         // The value is not passed through, but an error must be 
-        guardedObservable.emitError(new Error('Guard failed'))
+        guardedObservable.emitComplete()
       }
     },
     guardedObservable.emitError,
