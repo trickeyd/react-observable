@@ -163,16 +163,13 @@ const createObservable = ({ initialValue, equalityFn, name } = {
             ? entries.filter(([key]) => keys.includes(key))
             : entries;
         return filteredEntries.reduce((acc, [key, value]) => {
-            const name = `${getName()}_${key}`;
-            const observable = (0, exports.createObservable)({
-                initialValue: value,
-                name,
-            });
-            subscribe((val) => observable.set(val), observable.emitError, observable.emitComplete);
-            return ({
+            const name = `${key}${observablePostfix}`;
+            return {
                 ...acc,
-                [`${key}${observablePostfix}`]: observable,
-            });
+                [name]: stream((val) => val[key], {
+                    streamedName: name,
+                }),
+            };
         }, {});
     };
     /**

@@ -281,28 +281,15 @@ export const createObservable = <T extends unknown>(
       ? entries.filter(([key]) => keys.includes(key as keyof T))
       : entries
 
-    return filteredEntries.reduce(
-      (acc, [key, value]) => {
-        const name = `${getName()}_${key}`
-        const observable = createObservable({
-          initialValue: value,
-          name,
-        })
-        
-        subscribe(
-          (val) => observable.set(val),
-          observable.emitError,
-          observable.emitComplete
-        )
-
-        return ({
+      return filteredEntries.reduce((acc, [key, value]) => {
+        const name = `${key}${observablePostfix}`
+      return {
         ...acc,
-        [`${key}${observablePostfix}`]: observable,
-        })
-      },
-    
-      {} as MapEntriesReturn<T, P>,
-    )
+        [name]: stream((val) => val[key as keyof T], {
+          streamedName: name,
+        }),
+      }
+    }, {} as MapEntriesReturn<T, P>)
   }
 
   /**
