@@ -1,13 +1,10 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.persistentObservables = void 0;
 exports.createPersistentObservable = createPersistentObservable;
-const async_storage_1 = __importDefault(require("@react-native-async-storage/async-storage"));
 const observable_1 = require("./observable");
 const general_1 = require("../utils/general");
+const createStore_1 = require("../store/createStore");
 exports.persistentObservables = [];
 const defaultMergeOnHydration = (initialValue, persisted) => {
     if (!(0, general_1.isPlainObject)(initialValue)) {
@@ -16,6 +13,12 @@ const defaultMergeOnHydration = (initialValue, persisted) => {
     return { ...initialValue, ...(persisted !== null && persisted !== void 0 ? persisted : {}) };
 };
 function createPersistentObservable({ name, initialValue, equalityFn, mergeOnHydration = defaultMergeOnHydration, }) {
+    let _persistentStorage = createStore_1.persistentStorage$.get();
+    if (!_persistentStorage) {
+        createStore_1.persistentStorage$.subscribeOnce((persistentStorage) => {
+            _persistentStorage = persistentStorage;
+        });
+    }
     const base = (0, observable_1.createObservable)({ initialValue, name });
     const _setInternal = (isSilent) => (newValue) => {
         const observableName = base.getName();
@@ -29,17 +32,20 @@ function createPersistentObservable({ name, initialValue, equalityFn, mergeOnHyd
             return;
         }
         isSilent ? base.setSilent(reducedValue) : base.set(reducedValue);
-        async_storage_1.default.setItem(observableName, JSON.stringify(reducedValue));
+        _persistentStorage.setItem(observableName, JSON.stringify(reducedValue));
     };
     const setSilent = _setInternal(true);
     const set = _setInternal(false);
     const rehydrate = () => new Promise((resolve, reject) => {
+        if (!_persistentStorage) {
+            throw new Error('Trying to rehydrate a persistent observable without a persistent storage.');
+        }
         const observableName = base.getName();
         if (!observableName || observableName === base.getId()) {
             reject(new Error('Persistent observable name is required for rehydration.'));
         }
         try {
-            async_storage_1.default.getItem(observableName).then((value) => {
+            _persistentStorage.getItem(observableName).then((value) => {
                 if (value) {
                     const persisted = JSON.parse(value);
                     const data = mergeOnHydration

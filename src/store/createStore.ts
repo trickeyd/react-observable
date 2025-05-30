@@ -1,6 +1,7 @@
 import { Observable } from '../types/observable'
 import { createObservable } from '../factories/observable'
 import {  Store } from '../types/store'
+import { PersistentStorage } from '../types/persistence'
 
 /** @internal */
 export const store$ = createObservable<Store>()
@@ -13,12 +14,20 @@ export const flatStore$ = store$.stream((store) => Object.entries(store).reduce(
     }), {} as Record<string, Observable<unknown>>)
 )
 
+export const persistentStorage$ = createObservable<PersistentStorage>()
+
 const flushableObservables: Observable<unknown>[] = []
 let storeIsInitialized = false
 
-export const createStore = (store: Store, options?:{}) => {
+export const createStore = (store: Store, options:{
+  persistentStorage?: PersistentStorage
+} = {}) => {
   if(storeIsInitialized) {
     throw new Error('Store already initialized')
+  }
+
+  if(options?.persistentStorage) {
+    persistentStorage$.set(options.persistentStorage)
   }
 
   let flatStore: Record<string, Observable<unknown>> = {}
