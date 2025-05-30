@@ -1,18 +1,14 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createObservable = void 0;
 const general_1 = require("../utils/general");
-const react_native_uuid_1 = __importDefault(require("react-native-uuid"));
 const general_2 = require("../utils/general");
 const stream_1 = require("../utils/stream");
 const createObservable = ({ initialValue, equalityFn, name } = {
     initialValue: undefined,
 }) => {
     const streamStack = [];
-    const id = react_native_uuid_1.default.v4();
+    const id = (0, general_2.uuid)();
     let observableName = name !== null && name !== void 0 ? name : id;
     let listenerRecords = [];
     const getInitialValue = () => (0, general_1.isFunction)(initialValue) ? initialValue() : initialValue;
@@ -45,12 +41,12 @@ const createObservable = ({ initialValue, equalityFn, name } = {
     const set = _setInternal(true);
     const setSilent = _setInternal(false);
     const subscribe = (listener, onError, onComplete) => {
-        const id = react_native_uuid_1.default.v4();
+        const id = (0, general_2.uuid)();
         listenerRecords.push({ listener, onError, id, once: false, onComplete });
         return () => unsubscribe(id);
     };
     const subscribeOnce = (listener, onError, onComplete) => {
-        const id = react_native_uuid_1.default.v4();
+        const id = (0, general_2.uuid)();
         listenerRecords.push({ listener, onError, id, once: true, onComplete });
         return () => unsubscribe(id);
     };

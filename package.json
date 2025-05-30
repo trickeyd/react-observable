@@ -23,9 +23,7 @@
   "author": "James Trickey",
   "license": "MIT",
   "private": false,
-  "dependencies": {
-    "react-native-uuid": "^2.0.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/react": "^19.1.4",
     "@types/react-native-uuid": "^2.0.0",

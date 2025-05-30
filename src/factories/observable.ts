@@ -1,6 +1,5 @@
 import { isFunction, isObject } from '../utils/general'
-import uuid from 'react-native-uuid'
-import { tryCatch, tryCatchSync } from '../utils/general'
+import { tryCatch, tryCatchSync, uuid } from '../utils/general'
 import { createStreamName } from '../utils/stream'
 import {
   CreateObservableParams,
@@ -27,7 +26,7 @@ export const createObservable = <T extends unknown>(
   },
 ): Observable<T> => {
   const streamStack: string[] = []
-  const id = uuid.v4() as string
+  const id = uuid()
   let observableName: string = name ?? id
   let listenerRecords: ListenerRecord<T>[] = []
 
@@ -82,13 +81,13 @@ export const createObservable = <T extends unknown>(
 
 
   const subscribe: SubscribeFunction<T> = (listener, onError, onComplete) => {
-    const id = uuid.v4() as string
+    const id = uuid() as string
     listenerRecords.push({ listener, onError, id, once: false, onComplete })
     return () => unsubscribe(id)
   }
 
   const subscribeOnce: SubscribeFunction<T> = (listener, onError, onComplete) => {
-    const id = uuid.v4() as string
+    const id = uuid() as string
     listenerRecords.push({ listener, onError, id, once: true, onComplete })
     return () => unsubscribe(id)
   }

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.shallowEqual = exports.isPlainObject = exports.isObject = exports.isFunction = exports.identity = exports.tryCatchSync = exports.tryCatch = void 0;
+exports.uuid = uuid;
 const tryCatch = async (fn, errorMessage) => {
     try {
         const result = await fn();
@@ -53,3 +54,9 @@ const shallowEqual = (a, b) => {
     });
 };
 exports.shallowEqual = shallowEqual;
+function uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}

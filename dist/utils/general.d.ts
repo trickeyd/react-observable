@@ -5,3 +5,4 @@ export declare const isFunction: (value: unknown) => value is Function;
 export declare const isObject: (value: unknown) => value is object;
 export declare const isPlainObject: (value: unknown) => value is object;
 export declare const shallowEqual: (a: unknown, b: unknown) => boolean;
+export declare function uuid(): string;
