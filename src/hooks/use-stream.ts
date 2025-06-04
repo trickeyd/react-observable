@@ -6,20 +6,20 @@ import { Store } from '../types/store'
 import { createObservable } from '../factories/observable'
 import { useStoreProxy } from './use-store-proxy'
 
-export const useStream = <ReturnT = any>(
+export const useStream = <ReturnT = any, DepsT extends unknown[] = unknown[]>(
   initialise: ({
     $,
     store,
   }: {
-    $: Observable<unknown[]>
+    $: Observable<DepsT>
     store: Store
   }) => Observable<ReturnT>,
-  dependencies: unknown[],
+  dependencies: DepsT,
 ): Readonly<ReturnT> => {
   const ref = useRef<Observable<ReturnT> | undefined>(undefined)
   const subscriptionsRef = useRef<(() => void)[]>([])
   const entry$ = useRef(
-    createObservable<unknown[]>({ initialValue: dependencies }),
+    createObservable<DepsT>({ initialValue: dependencies }),
   ).current
 
   const handleSubscription = useCallback((unsubscribe: () => void) => {
