@@ -27,8 +27,8 @@ function createPersistentObservable({ name, initialValue, equalityFn, mergeOnHyd
         }
         const value = base.get();
         const reducedValue = (0, general_1.isFunction)(newValue) ? newValue(value) : newValue;
-        if (((equalityFn && !equalityFn(value, reducedValue)) ||
-            value === reducedValue)) {
+        if ((equalityFn && !equalityFn(value, reducedValue)) ||
+            value === reducedValue) {
             return;
         }
         isSilent ? base.setSilent(reducedValue) : base.set(reducedValue);

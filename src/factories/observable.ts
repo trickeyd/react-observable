@@ -38,14 +38,17 @@ export const createObservable = <T extends unknown>(
   const get: ObservableGetter<T> = (): Readonly<T> => value as Readonly<T>
 
   const emit: EmitOperator = () => {
-    const unsubscribeIds = listenerRecords.reduce<string[]>((acc, { listener, once, id }) => {
-      listener?.(value as Readonly<T>)
-      return once ? [...acc, id] : acc
-    }, [] as string[])
+    const unsubscribeIds = listenerRecords.reduce<string[]>(
+      (acc, { listener, once, id }) => {
+        listener?.(value as Readonly<T>)
+        return once ? [...acc, id] : acc
+      },
+      [] as string[],
+    )
     unsubscribeIds.forEach((id) => unsubscribe(id))
   }
 
-  const emitError: EmitErrorOperator = (err: Error) => 
+  const emitError: EmitErrorOperator = (err: Error) =>
     listenerRecords.forEach(({ onError }) => onError?.(err))
 
   /**
@@ -56,29 +59,27 @@ export const createObservable = <T extends unknown>(
   const emitComplete: () => void = () =>
     listenerRecords.forEach(({ onComplete }) => onComplete?.())
 
-  const _setInternal= (isSilent:boolean): ObservableSetter<T> => (newValue) => {
-    const reducedValue: T = (
-      isFunction(newValue) ? newValue(get()) : newValue
-    ) as T
+  const _setInternal =
+    (isSilent: boolean): ObservableSetter<T> =>
+    (newValue) => {
+      const reducedValue: T = (
+        isFunction(newValue) ? newValue(get()) : newValue
+      ) as T
 
-    if (
-      ((equalityFn &&
-        !equalityFn(
-          value as Readonly<T>,
-          reducedValue as Readonly<T>,
-        )) ||
-        value === reducedValue)
-    ) {
-      return
+      if (
+        (equalityFn &&
+          !equalityFn(value as Readonly<T>, reducedValue as Readonly<T>)) ||
+        value === reducedValue
+      ) {
+        return
+      }
+
+      value = reducedValue
+      isSilent && emit()
     }
-
-    value = reducedValue
-    isSilent && emit()
-  }
 
   const set: ObservableSetter<T> = _setInternal(true)
   const setSilent: ObservableSetter<T> = _setInternal(false)
-
 
   const subscribe: SubscribeFunction<T> = (listener, onError, onComplete) => {
     const id = uuid() as string
@@ -86,13 +87,21 @@ export const createObservable = <T extends unknown>(
     return () => unsubscribe(id)
   }
 
-  const subscribeOnce: SubscribeFunction<T> = (listener, onError, onComplete) => {
+  const subscribeOnce: SubscribeFunction<T> = (
+    listener,
+    onError,
+    onComplete,
+  ) => {
     const id = uuid() as string
     listenerRecords.push({ listener, onError, id, once: true, onComplete })
     return () => unsubscribe(id)
   }
 
-  const subscribeWithValue: SubscribeFunction<T> = (listener, onError, onComplete) => {
+  const subscribeWithValue: SubscribeFunction<T> = (
+    listener,
+    onError,
+    onComplete,
+  ) => {
     const unsubscribe = subscribe(listener, onError, onComplete)
     if (listener) {
       listener(value as Readonly<T>)
@@ -108,7 +117,6 @@ export const createObservable = <T extends unknown>(
     ...observables: { [K in keyof U]: Observable<U[K]> }
   ) => {
     type CombinedValues = [T, ...U]
-
 
     const { initialValues, subscribeFunctions } = observables.reduce<{
       initialValues: CombinedValues
@@ -146,7 +154,7 @@ export const createObservable = <T extends unknown>(
   }
 
   const withLatestFrom = <OtherT extends unknown[]>(
-    ...observables:[...{ [K in keyof OtherT]: Observable<OtherT[K]>}]
+    ...observables: [...{ [K in keyof OtherT]: Observable<OtherT[K]> }]
   ) => {
     type CombinedValues = [T, ...{ [K in keyof OtherT]: OtherT[K] }]
 
@@ -166,7 +174,7 @@ export const createObservable = <T extends unknown>(
         resultObservable$.set(combined)
       },
       resultObservable$.emitError,
-      resultObservable$.emitComplete
+      resultObservable$.emitComplete,
     )
     return resultObservable$
   }
@@ -255,9 +263,9 @@ export const createObservable = <T extends unknown>(
       async (val) => {
         await new Promise((r) => setTimeout(r, milliseconds))
         newObservable$.set(val as T)
-      }, 
+      },
       newObservable$.emitError,
-      newObservable$.emitComplete
+      newObservable$.emitComplete,
     )
 
     return newObservable$
@@ -272,7 +280,9 @@ export const createObservable = <T extends unknown>(
   } = {}) => {
     const currentValue = get()
     if (!isObject(currentValue)) {
-      throw new Error(`mapEntries can only be used on object observables: ${getName()} is a ${typeof currentValue}`)
+      throw new Error(
+        `mapEntries can only be used on object observables: ${getName()} is a ${typeof currentValue}`,
+      )
     }
 
     const entries = Object.entries(currentValue as object)
@@ -280,15 +290,18 @@ export const createObservable = <T extends unknown>(
       ? entries.filter(([key]) => keys.includes(key as keyof T))
       : entries
 
-      return filteredEntries.reduce((acc, [key, value]) => {
+    return filteredEntries.reduce(
+      (acc, [key, value]) => {
         const name = `${key}${observablePostfix}`
-      return {
-        ...acc,
-        [name]: stream((val) => val[key as keyof T], {
-          streamedName: name,
-        }),
-      }
-    }, {} as MapEntriesReturn<T, P>)
+        return {
+          ...acc,
+          [name]: stream((val) => val[key as keyof T], {
+            streamedName: name,
+          }),
+        }
+      },
+      {} as MapEntriesReturn<T, P>,
+    )
   }
 
   /**
@@ -309,7 +322,6 @@ export const createObservable = <T extends unknown>(
       setter: ObservableSetter<T>,
     ) => void,
   ) => {
-
     const newObservable$ = createObservable<T>({
       initialValue: get(),
       name: `${name}_catchError`,
@@ -331,7 +343,7 @@ export const createObservable = <T extends unknown>(
     subscribe(
       (val) => newObservable$.set(val),
       handleError,
-      newObservable$.emitComplete
+      newObservable$.emitComplete,
     )
 
     return newObservable$
@@ -341,23 +353,24 @@ export const createObservable = <T extends unknown>(
     predicate: (previousValue: Readonly<T>, nextValue: Readonly<T>) => boolean,
   ) => {
     // Create a new observable for the guarded stream
-    const guardedObservable = createObservable<T>({ initialValue: get() });
+    const guardedObservable = createObservable<T>({ initialValue: get() })
 
     // Subscribe to the original observable
-    observable.subscribe((nextValue) => {
-      const prevValue = guardedObservable.get();
-      if (predicate(prevValue, nextValue)) {
-        guardedObservable.set(nextValue);
-      } else {
-        // The value is not passed through, but an error must be 
-        guardedObservable.emitComplete()
-      }
-    },
-    guardedObservable.emitError,
-    guardedObservable.emitComplete
-  );
+    observable.subscribe(
+      (nextValue) => {
+        const prevValue = guardedObservable.get()
+        if (predicate(prevValue, nextValue)) {
+          guardedObservable.set(nextValue)
+        } else {
+          // The value is not passed through, but an error must be
+          guardedObservable.emitComplete()
+        }
+      },
+      guardedObservable.emitError,
+      guardedObservable.emitComplete,
+    )
 
-    return guardedObservable;
+    return guardedObservable
   }
 
   const reset = () => set(getInitialValue() as T)
@@ -371,7 +384,7 @@ export const createObservable = <T extends unknown>(
   const getId = (): string => id
 
   const observable: Observable<T> = {
-    get, 
+    get,
     set,
     setSilent,
     subscribe,
@@ -398,4 +411,4 @@ export const createObservable = <T extends unknown>(
   }
 
   return observable
-} 
+}

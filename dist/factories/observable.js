@@ -30,9 +30,9 @@ const createObservable = ({ initialValue, equalityFn, name } = {
     const emitComplete = () => listenerRecords.forEach(({ onComplete }) => onComplete === null || onComplete === void 0 ? void 0 : onComplete());
     const _setInternal = (isSilent) => (newValue) => {
         const reducedValue = ((0, general_1.isFunction)(newValue) ? newValue(get()) : newValue);
-        if (((equalityFn &&
+        if ((equalityFn &&
             !equalityFn(value, reducedValue)) ||
-            value === reducedValue)) {
+            value === reducedValue) {
             return;
         }
         value = reducedValue;
@@ -211,7 +211,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
                 guardedObservable.set(nextValue);
             }
             else {
-                // The value is not passed through, but an error must be 
+                // The value is not passed through, but an error must be
                 guardedObservable.emitComplete();
             }
         }, guardedObservable.emitError, guardedObservable.emitComplete);

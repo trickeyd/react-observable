@@ -4,8 +4,15 @@ import { ReactObservableContext } from '../store/context'
 import { wrapObservable } from '../utils/stream'
 import { Safe } from '../types/access'
 
-export const useStoreProxy = (onSubscription: (unsubscribe: () => void) => void) => {
+export const useStoreProxy = (
+  onSubscription: (unsubscribe: () => void) => void,
+) => {
   const observableStore = useContext(ReactObservableContext)
+  if (!observableStore) {
+    throw new Error(
+      'useStoreProxy must be used within a ReactObservableProvider',
+    )
+  }
 
   const observableStoreProxy = useRef(
     Object.entries(observableStore as Safe<Store>).reduce(
@@ -25,4 +32,4 @@ export const useStoreProxy = (onSubscription: (unsubscribe: () => void) => void)
   ).current
 
   return observableStoreProxy as Store
-} 
+}

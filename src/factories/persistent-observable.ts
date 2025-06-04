@@ -32,62 +32,67 @@ export function createPersistentObservable<T>({
   equalityFn,
   mergeOnHydration = defaultMergeOnHydration,
 }: CreatePersistentObservableParams<T>): Observable<T> {
-
   let _persistentStorage = persistentStorage$.get()
-  if(!_persistentStorage) {
+  if (!_persistentStorage) {
     persistentStorage$.subscribeOnce((persistentStorage) => {
       _persistentStorage = persistentStorage
     })
   }
-  
+
   const base = createObservable({ initialValue, name })
 
-  const _setInternal = (isSilent:boolean): ObservableSetter<T> => (newValue) => {
-    const observableName = base.getName()
-    if(!observableName || observableName === base.getId()) {
-      throw new Error('Persistent observable name is required for set.')
-    }
-    const value = base.get()
-    const reducedValue = isFunction(newValue) ? newValue(value) : newValue
+  const _setInternal =
+    (isSilent: boolean): ObservableSetter<T> =>
+    (newValue) => {
+      const observableName = base.getName()
+      if (!observableName || observableName === base.getId()) {
+        throw new Error('Persistent observable name is required for set.')
+      }
+      const value = base.get()
+      const reducedValue = isFunction(newValue) ? newValue(value) : newValue
 
-    if (
-      ((equalityFn && !equalityFn(value, reducedValue as Readonly<T>)) ||
-        value === reducedValue)
-    ) {
-      return
-    }
+      if (
+        (equalityFn && !equalityFn(value, reducedValue as Readonly<T>)) ||
+        value === reducedValue
+      ) {
+        return
+      }
 
-    isSilent ? base.setSilent(reducedValue) : base.set(reducedValue)
-    _persistentStorage.setItem(observableName, JSON.stringify(reducedValue))
-  }
+      isSilent ? base.setSilent(reducedValue) : base.set(reducedValue)
+      _persistentStorage.setItem(observableName, JSON.stringify(reducedValue))
+    }
 
   const setSilent: ObservableSetter<T> = _setInternal(true)
   const set: ObservableSetter<T> = _setInternal(false)
 
   const rehydrate = (): Promise<void> =>
     new Promise((resolve, reject) => {
-      if(!_persistentStorage) {
-        throw new Error('Trying to rehydrate a persistent observable without a persistent storage.')
+      if (!_persistentStorage) {
+        throw new Error(
+          'Trying to rehydrate a persistent observable without a persistent storage.',
+        )
       }
       const observableName = base.getName()
-      if(!observableName || observableName === base.getId()) {
-        reject(new Error('Persistent observable name is required for rehydration.'))
+      if (!observableName || observableName === base.getId()) {
+        reject(
+          new Error('Persistent observable name is required for rehydration.'),
+        )
       }
       try {
         _persistentStorage.getItem(observableName).then((value) => {
           if (value) {
             const persisted = JSON.parse(value) as T
-          const data = mergeOnHydration
-            ? mergeOnHydration(base.getInitialValue(), persisted)
-            : persisted
-          base.set(data)
-        }
-        resolve()
-      })
-    } catch (error) {
-      reject(error)
-    }
-  })
+            const data = mergeOnHydration
+              ? mergeOnHydration(base.getInitialValue(), persisted)
+              : persisted
+            base.set(data)
+          }
+          resolve()
+        })
+      } catch (error) {
+        reject(error)
+      }
+    })
 
   const reset = () => set(base.getInitialValue())
 

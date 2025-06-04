@@ -10,7 +10,10 @@ interface Props<ReturnT> {
   result$?: Observable<ReturnT>
 }
 
-type ExecuteReturnType<T> = [T, undefined] | [undefined, Error] | [undefined, undefined]
+type ExecuteReturnType<T> =
+  | [T, undefined]
+  | [undefined, Error]
+  | [undefined, undefined]
 
 export const createStream = <ReturnT, InputT = undefined>(
   initialise: ({
@@ -29,12 +32,10 @@ export const createStream = <ReturnT, InputT = undefined>(
   const exit$ = createObservable<ReturnT>({ initialValue })
   const isInitialised = createObservable<boolean>({ initialValue: false })
 
-
   if (result$) {
     // we don't really need to pass the error on to the result
     exit$.subscribe((val) => result$.set(val as ReturnT))
   }
-  
 
   const initialiseStream = (store: Safe<Store>) => {
     const stream$: Observable<ReturnT> = initialise({
@@ -47,33 +48,31 @@ export const createStream = <ReturnT, InputT = undefined>(
 
   const execute = (payload?: InputT): Promise<ExecuteReturnType<ReturnT>> =>
     new Promise((resolve) => {
-
       const run = () => {
         exit$.subscribe(
           (data) => {
             resolve([data as ReturnT, undefined])
           },
-  
+
           (error) => {
             onError && onError(error)
             resolve([undefined, error])
           },
-          
+
           () => {
             resolve([undefined, undefined])
-          }
+          },
         )
-        if(payload){
+        if (payload) {
           entry$.setSilent(payload)
         }
         entry$.emit()
-        
       }
 
-      if(isInitialised.get()){
+      if (isInitialised.get()) {
         run()
-      }else{
-        if(!!store$.get()){
+      } else {
+        if (!!store$.get()) {
           initialiseStream(store$.get())
           run()
         } else {
@@ -83,7 +82,6 @@ export const createStream = <ReturnT, InputT = undefined>(
           })
         }
       }
-   
     })
   execute.exit$ = exit$
   return execute
