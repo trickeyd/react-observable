@@ -11,16 +11,15 @@ export const useStream = <ReturnT = any>(
     $,
     store,
   }: {
-    $: Observable<undefined>
+    $: Observable<unknown[]>
     store: Store
   }) => Observable<ReturnT>,
-  dependencies: any[],
+  dependencies: unknown[],
 ): Readonly<ReturnT> => {
-  const observableRef = useRef<Observable<ReturnT> | undefined>(undefined)
-  const observableSubscriptionRef = useRef<() => void | undefined>(undefined)
+  const ref = useRef<Observable<ReturnT> | undefined>(undefined)
   const subscriptionsRef = useRef<(() => void)[]>([])
   const entry$ = useRef(
-    createObservable<undefined>({ initialValue: undefined }),
+    createObservable<unknown[]>({ initialValue: dependencies }),
   ).current
 
   const handleSubscription = useCallback((unsubscribe: () => void) => {
@@ -29,49 +28,29 @@ export const useStream = <ReturnT = any>(
 
   const observableStoreProxy = useStoreProxy(handleSubscription)
 
-  const initialiseObservable = useCallback(() => {
-    observableRef.current = initialise({
+  if (!ref.current) {
+    ref.current = initialise({
       $: entry$,
       store: observableStoreProxy,
     })
-  }, [])
-
-  console.log('TEST')
-  const subscribe = useCallback(() => {
-    if (!observableRef.current) {
-      throw new Error('Attempting to subscribe to an uninitialised observable')
-    }
-    observableSubscriptionRef.current = observableRef.current.subscribe(
-      (newData: Readonly<ReturnT>) => {
-        setData(newData)
-      },
-    )
-  }, [])
-
-  const cleanUp = useCallback(() => {
-    observableSubscriptionRef.current?.()
-    subscriptionsRef.current.forEach((unsubscribe) => unsubscribe())
-    subscriptionsRef.current.length = 0
-  }, [])
+  }
 
   const isEqual = useEqualityChecker(dependencies)
+  if (!isEqual) {
+    entry$.set(dependencies)
+  }
+
+  const [data, setData] = useState(ref.current.get)
+
   useEffect(() => {
-    console.log('isEqual', isEqual)
-    if (!isEqual) {
-      cleanUp()
-      initialiseObservable()
-      entry$.emit()
+    const sub = ref.current?.subscribe((newData: Readonly<ReturnT>) => {
+      setData(newData)
+    })
+    return () => {
+      sub?.()
+      subscriptionsRef.current.forEach((unsub) => unsub())
+      subscriptionsRef.current.length = 0
     }
-  }, [isEqual])
-
-  const [data, setData] = useState(() => {
-    console.log('observableRef.current init', observableRef.current)
-    return observableRef.current!.get()
-  })
-
-  useEffect(() => {
-    subscribe()
-    return cleanUp
   }, [])
 
   return data
