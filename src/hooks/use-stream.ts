@@ -11,12 +11,13 @@ export const useStream = <ReturnT = any>(
     $,
     store,
   }: {
-    $: Observable<undefined>,
-    store: Store,
+    $: Observable<undefined>
+    store: Store
   }) => Observable<ReturnT>,
   dependencies: any[],
 ): Readonly<ReturnT> => {
-  const ref = useRef<Observable<ReturnT> | undefined>(undefined)
+  const observableRef = useRef<Observable<ReturnT> | undefined>(undefined)
+  const observableSubscriptionRef = useRef<() => void | undefined>(undefined)
   const subscriptionsRef = useRef<(() => void)[]>([])
   const entry$ = useRef(
     createObservable<undefined>({ initialValue: undefined }),
@@ -28,29 +29,44 @@ export const useStream = <ReturnT = any>(
 
   const observableStoreProxy = useStoreProxy(handleSubscription)
 
-  if (!ref.current) {
-    ref.current = initialise({
+  const initialiseObservable = useCallback(() => {
+    observableRef.current = initialise({
       $: entry$,
       store: observableStoreProxy,
     })
-  }
+  }, [])
+
+  const subscribe = useCallback(() => {
+    if (!observableRef.current) {
+      throw new Error('Attempting to subscribe to an uninitialised observable')
+    }
+    observableSubscriptionRef.current = observableRef.current.subscribe(
+      (newData: Readonly<ReturnT>) => {
+        setData(newData)
+      },
+    )
+  }, [])
+
+  const cleanUp = useCallback(() => {
+    observableSubscriptionRef.current?.()
+    subscriptionsRef.current.forEach((unsubscribe) => unsubscribe())
+    subscriptionsRef.current.length = 0
+  }, [])
 
   const isEqual = useEqualityChecker(dependencies)
-  if (!isEqual) {
-    entry$.emit()
-  }
+  useEffect(() => {
+    if (!isEqual) {
+      cleanUp()
+      initialiseObservable()
+      entry$.emit()
+    }
+  }, [isEqual])
 
-  const [data, setData] = useState(ref.current.get)
+  const [data, setData] = useState(observableRef.current!.get)
 
   useEffect(() => {
-    const sub = ref.current?.subscribe((newData: Readonly<ReturnT>) => {
-      setData(newData)
-    })
-    return () => {
-      sub?.()
-      subscriptionsRef.current.forEach((unsub) => unsub())
-      subscriptionsRef.current.length = 0
-    }
+    subscribe()
+    return cleanUp
   }, [])
 
   return data
