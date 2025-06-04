@@ -55,6 +55,7 @@ export const useStream = <ReturnT = any>(
 
   const isEqual = useEqualityChecker(dependencies)
   useEffect(() => {
+    console.log('isEqual', isEqual)
     if (!isEqual) {
       cleanUp()
       initialiseObservable()
@@ -62,7 +63,10 @@ export const useStream = <ReturnT = any>(
     }
   }, [isEqual])
 
-  const [data, setData] = useState(observableRef.current!.get)
+  const [data, setData] = useState(() => {
+    console.log('observableRef.current init', observableRef.current)
+    return observableRef.current!.get()
+  })
 
   useEffect(() => {
     subscribe()

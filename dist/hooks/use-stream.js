@@ -36,13 +36,17 @@ const useStream = (initialise, dependencies) => {
     }, []);
     const isEqual = (0, use_equality_checker_1.useEqualityChecker)(dependencies);
     (0, react_1.useEffect)(() => {
+        console.log('isEqual', isEqual);
         if (!isEqual) {
             cleanUp();
             initialiseObservable();
             entry$.emit();
         }
     }, [isEqual]);
-    const [data, setData] = (0, react_1.useState)(observableRef.current.get);
+    const [data, setData] = (0, react_1.useState)(() => {
+        console.log('observableRef.current init', observableRef.current);
+        return observableRef.current.get();
+    });
     (0, react_1.useEffect)(() => {
         subscribe();
         return cleanUp;
