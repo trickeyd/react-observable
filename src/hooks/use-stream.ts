@@ -36,6 +36,7 @@ export const useStream = <ReturnT = any>(
     })
   }, [])
 
+  console.log('TEST')
   const subscribe = useCallback(() => {
     if (!observableRef.current) {
       throw new Error('Attempting to subscribe to an uninitialised observable')

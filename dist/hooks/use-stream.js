@@ -20,6 +20,7 @@ const useStream = (initialise, dependencies) => {
             store: observableStoreProxy,
         });
     }, []);
+    console.log('TEST');
     const subscribe = (0, react_1.useCallback)(() => {
         if (!observableRef.current) {
             throw new Error('Attempting to subscribe to an uninitialised observable');
