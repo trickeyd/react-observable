@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getStoreObservable = exports.store$ = void 0;
+exports.getStoreObservable = void 0;
 const __1 = require("..");
-exports.store$ = (0, __1.createObservable)({ initialValue: null });
+const createStore_1 = require("../store/createStore");
 const getStoreObservable = (callback) => {
-    const store = exports.store$.get();
+    const store = createStore_1.store$.get();
     if (!store) {
         throw new Error('Store not initialized');
     }
