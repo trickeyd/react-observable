@@ -5,8 +5,12 @@ const observable_1 = require("../factories/observable");
 /** @internal */
 exports.store$ = (0, observable_1.createObservable)();
 /** @internal */
-exports.flatStore$ = exports.store$.stream((store) => Object.entries(store).reduce((acc, [pathName, segment]) => ({ ...acc,
-    ...Object.entries(segment).reduce((segmentAcc, [observablePathName, observable]) => ({ ...segmentAcc, [`${pathName}.${observablePathName}`]: observable }), {})
+exports.flatStore$ = exports.store$.stream((store) => Object.entries(store).reduce((acc, [pathName, segment]) => ({
+    ...acc,
+    ...Object.entries(segment).reduce((segmentAcc, [observablePathName, observable]) => ({
+        ...segmentAcc,
+        [`${pathName}.${observablePathName}`]: observable,
+    }), {}),
 }), {}));
 exports.persistentStorage$ = (0, observable_1.createObservable)();
 const flushableObservables = [];
@@ -18,10 +22,11 @@ const createStore = (store, options = {}) => {
     if (options === null || options === void 0 ? void 0 : options.persistentStorage) {
         exports.persistentStorage$.set(options.persistentStorage);
     }
+    const storeClone = Object.entries(store).reduce((acc, [pathName, segment]) => ({ ...acc, [pathName]: { ...segment } }), {});
     let flatStore = {};
     storeIsInitialized = true;
     // parse the store and apply the observable options
-    Object.entries(store).forEach(([pathName, segment]) => {
+    Object.entries(storeClone).forEach(([pathName, segment]) => {
         Object.entries(segment).forEach(([observablePathName, observable]) => {
             const path = `${pathName}.${observablePathName}`;
             const observableId = observable.getId();
@@ -38,7 +43,7 @@ const createStore = (store, options = {}) => {
         });
     });
     exports.flatStore$.set(flatStore);
-    exports.store$.set(store);
+    exports.store$.set(storeClone);
     return store;
 };
 exports.createStore = createStore;
