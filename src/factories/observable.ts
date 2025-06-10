@@ -255,6 +255,7 @@ export const createObservable = <T extends unknown>(
         () => project(data),
         `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`,
       )
+      console.log('newData', newData, error)
       if (error) {
         newObservable$.emitError(error, stack)
       } else {
