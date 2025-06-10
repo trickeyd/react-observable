@@ -45,7 +45,7 @@ export const createStream = <ReturnT, InputT = undefined>(
       store: store as Store,
     })
     isInitialised.set(true)
-    stream$.subscribe((val) => exit$.set(val as ReturnT), exit$.emitError)
+    stream$.subscribe(exit$.set, exit$.emitError, exit$.emitComplete)
   }
 
   const execute = (payload?: InputT): Promise<ExecuteReturnType<ReturnT>> =>

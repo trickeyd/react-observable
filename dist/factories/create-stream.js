@@ -19,7 +19,7 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
             store: store,
         });
         isInitialised.set(true);
-        stream$.subscribe((val) => exit$.set(val), exit$.emitError);
+        stream$.subscribe(exit$.set, exit$.emitError, exit$.emitComplete);
     };
     const execute = (payload) => new Promise((resolve) => {
         const run = () => {
