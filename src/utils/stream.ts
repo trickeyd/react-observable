@@ -22,9 +22,6 @@ export const wrapObservable = <T extends unknown = unknown>(
 
 export const getIsAppropriateStream = (
   stack: ObservableStackItem[],
-  entryName: string,
-  entryEmitCount: number,
-) =>
-  stack?.some(
-    (item) => item.name === entryName && item.emitCount === entryEmitCount,
-  )
+  id: string,
+  emitCount: number,
+) => stack?.some((item) => item.id === id && item.emitCount === emitCount)

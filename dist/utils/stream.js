@@ -14,5 +14,5 @@ const wrapObservable = (observable, onSubscription) => {
     return proxyObservable;
 };
 exports.wrapObservable = wrapObservable;
-const getIsAppropriateStream = (stack, entryName, entryEmitCount) => stack === null || stack === void 0 ? void 0 : stack.some((item) => item.name === entryName && item.emitCount === entryEmitCount);
+const getIsAppropriateStream = (stack, id, emitCount) => stack === null || stack === void 0 ? void 0 : stack.some((item) => item.id === id && item.emitCount === emitCount);
 exports.getIsAppropriateStream = getIsAppropriateStream;

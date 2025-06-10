@@ -8,7 +8,7 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
     const entry$ = (0, observable_1.createObservable)({ initialValue: undefined });
     const exit$ = (0, observable_1.createObservable)({ initialValue });
     const isInitialised = (0, observable_1.createObservable)({ initialValue: false });
-    const entryName = entry$.getName();
+    const entryId = entry$.getId();
     if (result$) {
         // we don't really need to pass the error on to the result
         exit$.subscribe((val) => result$.set(val));
@@ -23,34 +23,39 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
     };
     const execute = (payload) => new Promise((resolve) => {
         const run = () => {
-            const entryEmitCount = entry$.getEmitCount();
-            exit$.subscribeOnce((data, stack) => {
+            const unsubscribe = exit$.subscribe((data, stack) => {
                 const isAppropriateStream = stack
-                    ? (0, stream_1.getIsAppropriateStream)(stack, entryName, entryEmitCount)
+                    ? (0, stream_1.getIsAppropriateStream)(stack, entryId, entryEmitCount)
                     : false;
+                console.log('isAppropriateStream', isAppropriateStream, stack);
                 if (isAppropriateStream) {
                     resolve([data, undefined]);
+                    unsubscribe();
                 }
             }, (error, stack) => {
                 const isAppropriateStream = stack
-                    ? (0, stream_1.getIsAppropriateStream)(stack, entryName, entryEmitCount)
+                    ? (0, stream_1.getIsAppropriateStream)(stack, entryId, entryEmitCount)
                     : false;
+                console.log('isAppropriateStream error', isAppropriateStream, stack);
                 if (isAppropriateStream) {
                     onError && onError(error, stack);
                     resolve([undefined, error]);
+                    unsubscribe();
                 }
             }, (stack) => {
                 const isAppropriateStream = stack
-                    ? (0, stream_1.getIsAppropriateStream)(stack, entryName, entryEmitCount)
+                    ? (0, stream_1.getIsAppropriateStream)(stack, entryId, entryEmitCount)
                     : false;
+                console.log('isAppropriateStream complete', isAppropriateStream, stack);
                 if (isAppropriateStream) {
                     resolve([undefined, undefined]);
+                    unsubscribe();
                 }
             });
             if (payload) {
                 entry$.setSilent(payload);
             }
-            entry$.emit();
+            const entryEmitCount = entry$.emit();
         };
         if (!isInitialised.get()) {
             if (!!create_store_1.store$.get()) {

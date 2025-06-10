@@ -32,7 +32,7 @@ export const createStream = <ReturnT, InputT = undefined>(
   const entry$ = createObservable<InputT>({ initialValue: undefined })
   const exit$ = createObservable<ReturnT>({ initialValue })
   const isInitialised = createObservable<boolean>({ initialValue: false })
-  const entryName = entry$.getName()
+  const entryId = entry$.getId()
 
   if (result$) {
     // we don't really need to pass the error on to the result
@@ -51,40 +51,49 @@ export const createStream = <ReturnT, InputT = undefined>(
   const execute = (payload?: InputT): Promise<ExecuteReturnType<ReturnT>> =>
     new Promise((resolve) => {
       const run = () => {
-        const entryEmitCount = entry$.getEmitCount()
-        exit$.subscribeOnce(
+        const unsubscribe = exit$.subscribe(
           (data, stack) => {
             const isAppropriateStream = stack
-              ? getIsAppropriateStream(stack, entryName, entryEmitCount)
+              ? getIsAppropriateStream(stack, entryId, entryEmitCount)
               : false
+            console.log('isAppropriateStream', isAppropriateStream, stack)
             if (isAppropriateStream) {
               resolve([data as ReturnT, undefined])
+              unsubscribe()
             }
           },
 
           (error, stack) => {
             const isAppropriateStream = stack
-              ? getIsAppropriateStream(stack, entryName, entryEmitCount)
+              ? getIsAppropriateStream(stack, entryId, entryEmitCount)
               : false
+            console.log('isAppropriateStream error', isAppropriateStream, stack)
             if (isAppropriateStream) {
               onError && onError(error, stack)
               resolve([undefined, error])
+              unsubscribe()
             }
           },
 
           (stack) => {
             const isAppropriateStream = stack
-              ? getIsAppropriateStream(stack, entryName, entryEmitCount)
+              ? getIsAppropriateStream(stack, entryId, entryEmitCount)
               : false
+            console.log(
+              'isAppropriateStream complete',
+              isAppropriateStream,
+              stack,
+            )
             if (isAppropriateStream) {
               resolve([undefined, undefined])
+              unsubscribe()
             }
           },
         )
         if (payload) {
           entry$.setSilent(payload)
         }
-        entry$.emit()
+        const entryEmitCount = entry$.emit()
       }
 
       if (!isInitialised.get()) {
