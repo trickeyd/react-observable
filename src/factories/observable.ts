@@ -232,12 +232,12 @@ export const createObservable = <T extends unknown>(
           `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`,
         )
         if (projectError) {
-          newObservable$.emitError(projectError as Error)
+          newObservable$.emitError(projectError as Error, stack)
         } else {
           newObservable$.set(newData as NewT, stack)
         }
       },
-      (err: Error) => newObservable$.emitError(err),
+      newObservable$.emitError,
     )
 
     return newObservable$

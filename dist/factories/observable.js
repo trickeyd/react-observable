@@ -126,12 +126,12 @@ const createObservable = ({ initialValue, equalityFn, name } = {
         (executeOnCreation ? subscribeWithValue : subscribe)((data, stack) => {
             const [newData, projectError] = (0, general_2.tryCatchSync)(() => project(data), `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`);
             if (projectError) {
-                newObservable$.emitError(projectError);
+                newObservable$.emitError(projectError, stack);
             }
             else {
                 newObservable$.set(newData, stack);
             }
-        }, (err) => newObservable$.emitError(err));
+        }, newObservable$.emitError);
         return newObservable$;
     };
     const streamAsync = (project, { initialValue, streamedName, executeOnCreation = false, } = {}) => {
