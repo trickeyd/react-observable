@@ -42,7 +42,7 @@ export const createStream = <ReturnT, InputT = undefined>(
       $: entry$ as Observable<InputT>,
       store: store as Store,
     })
-
+    isInitialised.set(true)
     stream$.subscribe((val) => exit$.set(val as ReturnT), exit$.emitError)
   }
 
@@ -70,23 +70,20 @@ export const createStream = <ReturnT, InputT = undefined>(
         entry$.emit()
       }
 
-      if (isInitialised.get()) {
-        console.log('execute 1')
-        run()
-      } else {
+      if (!isInitialised.get()) {
         if (!!store$.get()) {
           console.log('execute 2')
           initialiseStream(store$.get())
-          run()
         } else {
           console.log('execute 2.5')
           store$.subscribeOnce((store: Safe<Store>) => {
             console.log('execute 3')
             initialiseStream(store)
-            run()
           })
         }
       }
+
+      run()
     })
   execute.exit$ = exit$
   return execute

@@ -16,6 +16,7 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
             $: entry$,
             store: store,
         });
+        isInitialised.set(true);
         stream$.subscribe((val) => exit$.set(val), exit$.emitError);
     };
     const execute = (payload) => new Promise((resolve) => {
@@ -34,25 +35,20 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
             }
             entry$.emit();
         };
-        if (isInitialised.get()) {
-            console.log('execute 1');
-            run();
-        }
-        else {
+        if (!isInitialised.get()) {
             if (!!create_store_1.store$.get()) {
                 console.log('execute 2');
                 initialiseStream(create_store_1.store$.get());
-                run();
             }
             else {
                 console.log('execute 2.5');
                 create_store_1.store$.subscribeOnce((store) => {
                     console.log('execute 3');
                     initialiseStream(store);
-                    run();
                 });
             }
         }
+        run();
     });
     execute.exit$ = exit$;
     return execute;
