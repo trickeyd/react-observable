@@ -11,10 +11,18 @@ const createObservable = ({ initialValue, equalityFn, name } = {
     let _emitCount = 0;
     let _observableName = name !== null && name !== void 0 ? name : id;
     let _listenerRecords = [];
-    const createStack = (stack) => [
-        ...(stack !== null && stack !== void 0 ? stack : []),
-        { id, name: _observableName, emitCount: _emitCount++, isError: true },
-    ];
+    const createStack = (stack, isError) => {
+        var _a, _b;
+        return [
+            ...(stack !== null && stack !== void 0 ? stack : []),
+            {
+                id,
+                name: _observableName,
+                emitCount: _emitCount++,
+                isError: (_b = isError !== null && isError !== void 0 ? isError : (_a = stack === null || stack === void 0 ? void 0 : stack[stack.length - 1]) === null || _a === void 0 ? void 0 : _a.isError) !== null && _b !== void 0 ? _b : false,
+            },
+        ];
+    };
     const getInitialValue = () => (0, general_1.isFunction)(initialValue) ? initialValue() : initialValue;
     const getEmitCount = () => _emitCount;
     let value = getInitialValue();
@@ -28,7 +36,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
         unsubscribeIds.forEach((id) => unsubscribe(id));
     };
     const emitError = (err, stack) => {
-        const newStack = createStack(stack);
+        const newStack = createStack(stack, true);
         _listenerRecords.forEach(({ onError }) => onError === null || onError === void 0 ? void 0 : onError(err, newStack));
     };
     /**

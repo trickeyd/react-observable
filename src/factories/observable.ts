@@ -35,9 +35,15 @@ export const createObservable = <T extends unknown>(
 
   const createStack = (
     stack?: ObservableStackItem[],
+    isError?: boolean,
   ): ObservableStackItem[] => [
     ...(stack ?? []),
-    { id, name: _observableName, emitCount: _emitCount++, isError: true },
+    {
+      id,
+      name: _observableName,
+      emitCount: _emitCount++,
+      isError: isError ?? stack?.[stack.length - 1]?.isError ?? false,
+    },
   ]
 
   const getInitialValue: GetInitialValueOperator<T> = (): T =>
@@ -62,7 +68,7 @@ export const createObservable = <T extends unknown>(
   }
 
   const emitError: EmitErrorOperator = (err: Error, stack) => {
-    const newStack = createStack(stack)
+    const newStack = createStack(stack, true)
     _listenerRecords.forEach(({ onError }) => onError?.(err, newStack))
   }
 
