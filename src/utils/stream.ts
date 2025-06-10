@@ -25,6 +25,4 @@ export const getIsAppropriateStream = (
   id: string,
   emitCount: number,
 ): boolean =>
-  stack?.some(
-    (item) => item.id === id && item.emitCount === emitCount && !item.isError,
-  )
+  stack?.some((item) => item.id === id && item.emitCount === emitCount)
