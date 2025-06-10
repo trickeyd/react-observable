@@ -58,7 +58,13 @@ export const createStream = <ReturnT, InputT = undefined>(
             const isAppropriateStream = stack
               ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
-            console.log('isAppropriateStream', isAppropriateStream, stack)
+            console.log(
+              'isAppropriateStream',
+              isAppropriateStream,
+              stack,
+              executionId,
+              entryEmitCount,
+            )
             if (isAppropriateStream) {
               resolve([data as ReturnT, undefined])
               unsubscribe()

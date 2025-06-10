@@ -29,7 +29,7 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
                 const isAppropriateStream = stack
                     ? (0, stream_1.getIsAppropriateStream)(stack, executionId, entryEmitCount)
                     : false;
-                console.log('isAppropriateStream', isAppropriateStream, stack);
+                console.log('isAppropriateStream', isAppropriateStream, stack, executionId, entryEmitCount);
                 if (isAppropriateStream) {
                     resolve([data, undefined]);
                     unsubscribe();
