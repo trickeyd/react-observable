@@ -29,6 +29,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
     const get = () => value;
     const emit = (stack) => {
         const newStack = createStack(stack);
+        console.log('emit - newStack', newStack);
         const unsubscribeIds = _listenerRecords.reduce((acc, { listener, once, id }) => {
             listener === null || listener === void 0 ? void 0 : listener(value, newStack);
             return once ? [...acc, id] : acc;
