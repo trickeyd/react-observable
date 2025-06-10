@@ -49,6 +49,7 @@ export const createStream = <ReturnT, InputT = undefined>(
   const execute = (payload?: InputT): Promise<ExecuteReturnType<ReturnT>> =>
     new Promise((resolve) => {
       const run = () => {
+        console.log('run')
         exit$.subscribe(
           (data) => {
             resolve([data as ReturnT, undefined])

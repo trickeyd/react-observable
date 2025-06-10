@@ -20,6 +20,7 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
     };
     const execute = (payload) => new Promise((resolve) => {
         const run = () => {
+            console.log('run');
             exit$.subscribe((data) => {
                 resolve([data, undefined]);
             }, (error) => {
