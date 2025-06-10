@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createStream = void 0;
 const observable_1 = require("./observable");
-const createStore_1 = require("../store/createStore");
+const create_store_1 = require("../store/create-store");
 const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
     const entry$ = (0, observable_1.createObservable)({ initialValue: undefined });
     const exit$ = (0, observable_1.createObservable)({ initialValue });
@@ -34,15 +34,18 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
             entry$.emit();
         };
         if (isInitialised.get()) {
+            console.log('execute 1');
             run();
         }
         else {
-            if (!!createStore_1.store$.get()) {
-                initialiseStream(createStore_1.store$.get());
+            if (!!create_store_1.store$.get()) {
+                console.log('execute 2');
+                initialiseStream(create_store_1.store$.get());
                 run();
             }
             else {
-                createStore_1.store$.subscribe((store) => {
+                create_store_1.store$.subscribeOnce((store) => {
+                    console.log('execute 3');
                     initialiseStream(store);
                     run();
                 });

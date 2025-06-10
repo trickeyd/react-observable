@@ -7,7 +7,7 @@ import {
 import { isFunction, isPlainObject } from '../utils/general'
 import { Readonly } from '../types/access'
 import { PersistentObservable } from '../types/observable'
-import { persistentStorage$ } from '../store/createStore'
+import { persistentStorage$ } from '../store/create-store'
 
 export const persistentObservables: PersistentObservable<any>[] = []
 

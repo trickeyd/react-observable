@@ -36,16 +36,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReactObservableContext = void 0;
 exports.ReactObservableProvider = ReactObservableProvider;
 const react_1 = __importStar(require("react"));
-const createStore_1 = require("./createStore");
+const create_store_1 = require("./create-store");
 /** @internal */
 exports.ReactObservableContext = (0, react_1.createContext)(null);
-function ReactObservableProvider({ children, loading = null, }) {
+function ReactObservableProvider({ children, loading = null }) {
     const [store, setStore] = (0, react_1.useState)(null);
     const isRehydrating = (0, react_1.useRef)(false);
     (0, react_1.useEffect)(() => {
         if (store || isRehydrating.current)
             return;
-        return createStore_1.store$.subscribeWithValue((incomingStore) => {
+        return create_store_1.store$.subscribeWithValue((incomingStore) => {
             isRehydrating.current = true;
             Promise.all(Object.values(incomingStore).reduce((acc, segment) => {
                 return [
@@ -56,10 +56,9 @@ function ReactObservableProvider({ children, loading = null, }) {
                             return observable.rehydrate();
                         }
                         return Promise.resolve(false);
-                    })
+                    }),
                 ];
-            }, []))
-                .then(() => {
+            }, [])).then(() => {
                 setStore(incomingStore);
                 isRehydrating.current = false;
             });

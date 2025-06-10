@@ -4,7 +4,7 @@ exports.persistentObservables = void 0;
 exports.createPersistentObservable = createPersistentObservable;
 const observable_1 = require("./observable");
 const general_1 = require("../utils/general");
-const createStore_1 = require("../store/createStore");
+const create_store_1 = require("../store/create-store");
 exports.persistentObservables = [];
 const defaultMergeOnHydration = (initialValue, persisted) => {
     if (!(0, general_1.isPlainObject)(initialValue)) {
@@ -13,9 +13,9 @@ const defaultMergeOnHydration = (initialValue, persisted) => {
     return { ...initialValue, ...(persisted !== null && persisted !== void 0 ? persisted : {}) };
 };
 function createPersistentObservable({ name, initialValue, equalityFn, mergeOnHydration = defaultMergeOnHydration, }) {
-    let _persistentStorage = createStore_1.persistentStorage$.get();
+    let _persistentStorage = create_store_1.persistentStorage$.get();
     if (!_persistentStorage) {
-        createStore_1.persistentStorage$.subscribeOnce((persistentStorage) => {
+        create_store_1.persistentStorage$.subscribeOnce((persistentStorage) => {
             _persistentStorage = persistentStorage;
         });
     }

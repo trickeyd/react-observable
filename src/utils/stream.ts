@@ -1,7 +1,7 @@
 import { Store } from '../types/store'
 import { createObservable } from '../factories/observable'
 import { Observable } from '../types/observable'
-import { store$ } from '../store/createStore'
+import { store$ } from '../store/create-store'
 
 export const createStreamName = (baseName: string): string => {
   const match = baseName.match(/_STREAM_(\d+)$/)

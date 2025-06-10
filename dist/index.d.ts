@@ -4,7 +4,7 @@ export * from './utils/general';
 export * from './utils/store';
 export * from './types/store';
 export * from './factories/observable';
-export * from './store/createStore';
+export * from './store/create-store';
 export * from './store/context';
 export * from './hooks/use-observable';
 export * from './hooks/use-stream';

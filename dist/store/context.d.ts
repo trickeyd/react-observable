@@ -6,5 +6,5 @@ interface Props {
     children: React.ReactNode;
     loading?: React.ReactNode | null;
 }
-export declare function ReactObservableProvider({ children, loading, }: Props): React.JSX.Element;
+export declare function ReactObservableProvider({ children, loading }: Props): React.JSX.Element;
 export {};

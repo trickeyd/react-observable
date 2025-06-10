@@ -21,7 +21,7 @@ __exportStar(require("./utils/general"), exports);
 __exportStar(require("./utils/store"), exports);
 __exportStar(require("./types/store"), exports);
 __exportStar(require("./factories/observable"), exports);
-__exportStar(require("./store/createStore"), exports);
+__exportStar(require("./store/create-store"), exports);
 __exportStar(require("./store/context"), exports);
 __exportStar(require("./hooks/use-observable"), exports);
 __exportStar(require("./hooks/use-stream"), exports);

@@ -1,7 +1,7 @@
 import { createObservable } from './observable'
 import { Observable } from '../types/observable'
 import { Store } from '../types/store'
-import { store$ } from '../store/createStore'
+import { store$ } from '../store/create-store'
 import { Safe } from '../types/access'
 
 interface Props<ReturnT> {
@@ -70,13 +70,16 @@ export const createStream = <ReturnT, InputT = undefined>(
       }
 
       if (isInitialised.get()) {
+        console.log('execute 1')
         run()
       } else {
         if (!!store$.get()) {
+          console.log('execute 2')
           initialiseStream(store$.get())
           run()
         } else {
-          store$.subscribe((store: Safe<Store>) => {
+          store$.subscribeOnce((store: Safe<Store>) => {
+            console.log('execute 3')
             initialiseStream(store)
             run()
           })

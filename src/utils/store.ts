@@ -1,6 +1,6 @@
 import { Observable, createObservable } from '..'
 import { Store } from '../types/store'
-import { store$ } from '../store/createStore'
+import { store$ } from '../store/create-store'
 
 export const getStoreObservable = <T>(
   callback: (store: Store) => Observable<T>,
