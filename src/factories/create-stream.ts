@@ -50,7 +50,7 @@ export const createStream = <ReturnT, InputT = undefined>(
     new Promise((resolve) => {
       const run = () => {
         console.log('run')
-        exit$.subscribe(
+        exit$.subscribeOnce(
           (data) => {
             resolve([data as ReturnT, undefined])
           },
@@ -79,6 +79,7 @@ export const createStream = <ReturnT, InputT = undefined>(
           initialiseStream(store$.get())
           run()
         } else {
+          console.log('execute 2.5')
           store$.subscribeOnce((store: Safe<Store>) => {
             console.log('execute 3')
             initialiseStream(store)

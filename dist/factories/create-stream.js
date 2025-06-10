@@ -21,7 +21,7 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
     const execute = (payload) => new Promise((resolve) => {
         const run = () => {
             console.log('run');
-            exit$.subscribe((data) => {
+            exit$.subscribeOnce((data) => {
                 resolve([data, undefined]);
             }, (error) => {
                 onError && onError(error);
@@ -45,6 +45,7 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
                 run();
             }
             else {
+                console.log('execute 2.5');
                 create_store_1.store$.subscribeOnce((store) => {
                     console.log('execute 3');
                     initialiseStream(store);
