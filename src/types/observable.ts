@@ -14,7 +14,7 @@ export type ObservableGetter<T> = () => Readonly<T>
 export type ObservableSetter<T> = (
   newValue: T | Readonly<T> | ((currentValue: Readonly<T>) => T | Readonly<T>),
   stack?: ObservableStackItem[],
-) => number
+) => void
 
 /** @internal */
 export type SubscribeFunction<T> = (
@@ -58,7 +58,7 @@ export type CatchErrorOperator<T> = (
 export type ResetOperator = () => void
 
 /** @internal */
-export type EmitOperator = (stack?: ObservableStackItem[]) => number
+export type EmitOperator = (stack?: ObservableStackItem[]) => void
 
 /** @internal */
 export type EmitErrorOperator = (

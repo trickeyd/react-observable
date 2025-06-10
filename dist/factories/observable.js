@@ -11,29 +11,25 @@ const createObservable = ({ initialValue, equalityFn, name } = {
     let _emitCount = 0;
     let _observableName = name !== null && name !== void 0 ? name : id;
     let _listenerRecords = [];
+    const createStack = (stack) => [
+        ...(stack !== null && stack !== void 0 ? stack : []),
+        { id, name: _observableName, emitCount: _emitCount++, isError: true },
+    ];
     const getInitialValue = () => (0, general_1.isFunction)(initialValue) ? initialValue() : initialValue;
     const getEmitCount = () => _emitCount;
     let value = getInitialValue();
     const get = () => value;
     const emit = (stack) => {
-        const emitCount = _emitCount++;
+        const newStack = createStack(stack);
         const unsubscribeIds = _listenerRecords.reduce((acc, { listener, once, id }) => {
-            listener === null || listener === void 0 ? void 0 : listener(value, stack
-                ? [
-                    ...stack,
-                    { id, name: _observableName, emitCount, isError: false },
-                ]
-                : undefined);
+            listener === null || listener === void 0 ? void 0 : listener(value, newStack);
             return once ? [...acc, id] : acc;
         }, []);
         unsubscribeIds.forEach((id) => unsubscribe(id));
-        return emitCount;
     };
     const emitError = (err, stack) => {
-        const emitCount = _emitCount++;
-        _listenerRecords.forEach(({ onError }) => onError === null || onError === void 0 ? void 0 : onError(err, stack
-            ? [...stack, { id, name: _observableName, emitCount, isError: true }]
-            : undefined));
+        const newStack = createStack(stack);
+        _listenerRecords.forEach(({ onError }) => onError === null || onError === void 0 ? void 0 : onError(err, newStack));
     };
     /**
      * emitComplete notifies all subscribers that the stream has completed successfully.
@@ -41,20 +37,20 @@ const createObservable = ({ initialValue, equalityFn, name } = {
      * Subscribers can provide an onComplete callback to react to stream completion.
      */
     const emitComplete = (stack) => {
-        const emitCount = _emitCount++;
-        _listenerRecords.forEach(({ onComplete }) => onComplete === null || onComplete === void 0 ? void 0 : onComplete(stack
-            ? [...stack, { id, name: _observableName, emitCount, isError: false }]
-            : undefined));
+        const newStack = createStack(stack);
+        _listenerRecords.forEach(({ onComplete }) => onComplete === null || onComplete === void 0 ? void 0 : onComplete(newStack));
     };
     const _setInternal = (isSilent) => (newValue, stack) => {
         const reducedValue = ((0, general_1.isFunction)(newValue) ? newValue(get()) : newValue);
         if ((equalityFn &&
             !equalityFn(value, reducedValue)) ||
             value === reducedValue) {
-            return -1;
+            return;
         }
         value = reducedValue;
-        return isSilent ? -1 : emit(stack);
+        if (!isSilent) {
+            emit(stack);
+        }
     };
     const set = _setInternal(false);
     const setSilent = _setInternal(true);
@@ -97,7 +93,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
                     clone[i] = val;
                     return clone;
                 }, stack);
-            }, (err) => combinationObservable$.emitError(err));
+            }, (err) => combinationObservable$.emitError(err), combinationObservable$.emitComplete);
         });
         return combinationObservable$;
     };
@@ -131,7 +127,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
             else {
                 newObservable$.set(newData, stack);
             }
-        }, newObservable$.emitError);
+        }, newObservable$.emitError, newObservable$.emitComplete);
         return newObservable$;
     };
     const streamAsync = (project, { initialValue, streamedName, executeOnCreation = false, } = {}) => {
@@ -149,7 +145,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
                 newObservable$.set(newData, stack);
             }
         };
-        (executeOnCreation ? subscribeWithValue : subscribe)(projectToNewObservable, newObservable$.emitError);
+        (executeOnCreation ? subscribeWithValue : subscribe)(projectToNewObservable, newObservable$.emitError, newObservable$.emitComplete);
         return newObservable$;
     };
     const tap = (callback) => {

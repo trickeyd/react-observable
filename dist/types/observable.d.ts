@@ -8,7 +8,7 @@ export interface ObservableStackItem {
 /** @internal */
 export type ObservableGetter<T> = () => Readonly<T>;
 /** @internal */
-export type ObservableSetter<T> = (newValue: T | Readonly<T> | ((currentValue: Readonly<T>) => T | Readonly<T>), stack?: ObservableStackItem[]) => number;
+export type ObservableSetter<T> = (newValue: T | Readonly<T> | ((currentValue: Readonly<T>) => T | Readonly<T>), stack?: ObservableStackItem[]) => void;
 /** @internal */
 export type SubscribeFunction<T> = (listener?: (value: Readonly<T>, stack?: ObservableStackItem[]) => void, onError?: (error: Error, stack?: ObservableStackItem[]) => void, onComplete?: (stack?: ObservableStackItem[]) => void) => () => void;
 /** @internal */
@@ -27,7 +27,7 @@ export type CatchErrorOperator<T> = (onError?: (error: Error, currentValue: Read
 /** @internal */
 export type ResetOperator = () => void;
 /** @internal */
-export type EmitOperator = (stack?: ObservableStackItem[]) => number;
+export type EmitOperator = (stack?: ObservableStackItem[]) => void;
 /** @internal */
 export type EmitErrorOperator = (error: Error, stack?: ObservableStackItem[]) => void;
 /** @internal */

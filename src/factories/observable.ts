@@ -33,6 +33,13 @@ export const createObservable = <T extends unknown>(
   let _observableName: string = name ?? id
   let _listenerRecords: ListenerRecord<T>[] = []
 
+  const createStack = (
+    stack?: ObservableStackItem[],
+  ): ObservableStackItem[] => [
+    ...(stack ?? []),
+    { id, name: _observableName, emitCount: _emitCount++, isError: true },
+  ]
+
   const getInitialValue: GetInitialValueOperator<T> = (): T =>
     isFunction(initialValue) ? initialValue() : (initialValue as T)
 
@@ -43,36 +50,20 @@ export const createObservable = <T extends unknown>(
   const get: ObservableGetter<T> = (): Readonly<T> => value as Readonly<T>
 
   const emit: EmitOperator = (stack) => {
-    const emitCount = _emitCount++
+    const newStack = createStack(stack)
     const unsubscribeIds = _listenerRecords.reduce<string[]>(
       (acc, { listener, once, id }) => {
-        listener?.(
-          value as Readonly<T>,
-          stack
-            ? [
-                ...stack,
-                { id, name: _observableName, emitCount, isError: false },
-              ]
-            : undefined,
-        )
+        listener?.(value as Readonly<T>, newStack)
         return once ? [...acc, id] : acc
       },
       [] as string[],
     )
     unsubscribeIds.forEach((id) => unsubscribe(id))
-    return emitCount
   }
 
   const emitError: EmitErrorOperator = (err: Error, stack) => {
-    const emitCount = _emitCount++
-    _listenerRecords.forEach(({ onError }) =>
-      onError?.(
-        err,
-        stack
-          ? [...stack, { id, name: _observableName, emitCount, isError: true }]
-          : undefined,
-      ),
-    )
+    const newStack = createStack(stack)
+    _listenerRecords.forEach(({ onError }) => onError?.(err, newStack))
   }
 
   /**
@@ -81,14 +72,8 @@ export const createObservable = <T extends unknown>(
    * Subscribers can provide an onComplete callback to react to stream completion.
    */
   const emitComplete: EmitCompleteOperator = (stack) => {
-    const emitCount = _emitCount++
-    _listenerRecords.forEach(({ onComplete }) =>
-      onComplete?.(
-        stack
-          ? [...stack, { id, name: _observableName, emitCount, isError: false }]
-          : undefined,
-      ),
-    )
+    const newStack = createStack(stack)
+    _listenerRecords.forEach(({ onComplete }) => onComplete?.(newStack))
   }
 
   const _setInternal =
@@ -103,11 +88,13 @@ export const createObservable = <T extends unknown>(
           !equalityFn(value as Readonly<T>, reducedValue as Readonly<T>)) ||
         value === reducedValue
       ) {
-        return -1
+        return
       }
 
       value = reducedValue
-      return isSilent ? -1 : emit(stack)
+      if (!isSilent) {
+        emit(stack)
+      }
     }
 
   const set: ObservableSetter<T> = _setInternal(false)
@@ -179,6 +166,7 @@ export const createObservable = <T extends unknown>(
           }, stack)
         },
         (err: Error) => combinationObservable$.emitError(err),
+        combinationObservable$.emitComplete,
       )
     })
 
@@ -238,6 +226,7 @@ export const createObservable = <T extends unknown>(
         }
       },
       newObservable$.emitError,
+      newObservable$.emitComplete,
     )
 
     return newObservable$
@@ -276,6 +265,7 @@ export const createObservable = <T extends unknown>(
     ;(executeOnCreation ? subscribeWithValue : subscribe)(
       projectToNewObservable,
       newObservable$.emitError,
+      newObservable$.emitComplete,
     )
 
     return newObservable$
