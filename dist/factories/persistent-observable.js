@@ -20,7 +20,7 @@ function createPersistentObservable({ name, initialValue, equalityFn, mergeOnHyd
         });
     }
     const base = (0, observable_1.createObservable)({ initialValue, name });
-    const _setInternal = (isSilent) => (newValue) => {
+    const _setInternal = (isSilent) => (newValue, stack) => {
         const observableName = base.getName();
         if (!observableName || observableName === base.getId()) {
             throw new Error('Persistent observable name is required for set.');
@@ -29,10 +29,10 @@ function createPersistentObservable({ name, initialValue, equalityFn, mergeOnHyd
         const reducedValue = (0, general_1.isFunction)(newValue) ? newValue(value) : newValue;
         if ((equalityFn && !equalityFn(value, reducedValue)) ||
             value === reducedValue) {
-            return;
+            return -1;
         }
-        isSilent ? base.setSilent(reducedValue) : base.set(reducedValue);
         _persistentStorage.setItem(observableName, JSON.stringify(reducedValue));
+        return isSilent ? base.setSilent(reducedValue) : base.set(reducedValue);
     };
     const setSilent = _setInternal(true);
     const set = _setInternal(false);

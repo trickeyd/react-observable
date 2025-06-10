@@ -1,11 +1,12 @@
 import { createObservable } from './observable'
-import { Observable } from '../types/observable'
+import { Observable, ObservableStackItem } from '../types/observable'
 import { Store } from '../types/store'
 import { store$ } from '../store/create-store'
 import { Safe } from '../types/access'
+import { getIsAppropriateStream } from '../utils/stream'
 
 interface Props<ReturnT> {
-  onError?: (err: Error) => void
+  onError?: (err: Error, stack?: ObservableStackItem[]) => void
   initialValue?: ReturnT
   result$?: Observable<ReturnT>
 }
@@ -31,6 +32,7 @@ export const createStream = <ReturnT, InputT = undefined>(
   const entry$ = createObservable<InputT>({ initialValue: undefined })
   const exit$ = createObservable<ReturnT>({ initialValue })
   const isInitialised = createObservable<boolean>({ initialValue: false })
+  const entryName = entry$.getName()
 
   if (result$) {
     // we don't really need to pass the error on to the result
@@ -49,19 +51,34 @@ export const createStream = <ReturnT, InputT = undefined>(
   const execute = (payload?: InputT): Promise<ExecuteReturnType<ReturnT>> =>
     new Promise((resolve) => {
       const run = () => {
-        console.log('run')
+        const entryEmitCount = entry$.getEmitCount()
         exit$.subscribeOnce(
-          (data) => {
-            resolve([data as ReturnT, undefined])
+          (data, stack) => {
+            const isAppropriateStream = stack
+              ? getIsAppropriateStream(stack, entryName, entryEmitCount)
+              : false
+            if (isAppropriateStream) {
+              resolve([data as ReturnT, undefined])
+            }
           },
 
-          (error) => {
-            onError && onError(error)
-            resolve([undefined, error])
+          (error, stack) => {
+            const isAppropriateStream = stack
+              ? getIsAppropriateStream(stack, entryName, entryEmitCount)
+              : false
+            if (isAppropriateStream) {
+              onError && onError(error, stack)
+              resolve([undefined, error])
+            }
           },
 
-          () => {
-            resolve([undefined, undefined])
+          (stack) => {
+            const isAppropriateStream = stack
+              ? getIsAppropriateStream(stack, entryName, entryEmitCount)
+              : false
+            if (isAppropriateStream) {
+              resolve([undefined, undefined])
+            }
           },
         )
         if (payload) {

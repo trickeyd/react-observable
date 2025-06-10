@@ -1,6 +1,6 @@
 import { Store } from '../types/store'
 import { createObservable } from '../factories/observable'
-import { Observable } from '../types/observable'
+import { Observable, ObservableStackItem } from '../types/observable'
 import { store$ } from '../store/create-store'
 
 export const createStreamName = (baseName: string): string => {
@@ -19,3 +19,12 @@ export const wrapObservable = <T extends unknown = unknown>(
   )
   return proxyObservable as Observable<T>
 }
+
+export const getIsAppropriateStream = (
+  stack: ObservableStackItem[],
+  entryName: string,
+  entryEmitCount: number,
+) =>
+  stack?.some(
+    (item) => item.name === entryName && item.emitCount === entryEmitCount,
+  )

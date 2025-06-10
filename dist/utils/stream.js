@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.wrapObservable = exports.createStreamName = void 0;
+exports.getIsAppropriateStream = exports.wrapObservable = exports.createStreamName = void 0;
 const observable_1 = require("../factories/observable");
 const createStreamName = (baseName) => {
     const match = baseName.match(/_STREAM_(\d+)$/);
@@ -14,3 +14,5 @@ const wrapObservable = (observable, onSubscription) => {
     return proxyObservable;
 };
 exports.wrapObservable = wrapObservable;
+const getIsAppropriateStream = (stack, entryName, entryEmitCount) => stack === null || stack === void 0 ? void 0 : stack.some((item) => item.name === entryName && item.emitCount === entryEmitCount);
+exports.getIsAppropriateStream = getIsAppropriateStream;

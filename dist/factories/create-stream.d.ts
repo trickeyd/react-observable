@@ -1,7 +1,7 @@
-import { Observable } from '../types/observable';
+import { Observable, ObservableStackItem } from '../types/observable';
 import { Store } from '../types/store';
 interface Props<ReturnT> {
-    onError?: (err: Error) => void;
+    onError?: (err: Error, stack?: ObservableStackItem[]) => void;
     initialValue?: ReturnT;
     result$?: Observable<ReturnT>;
 }

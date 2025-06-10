@@ -1,18 +1,26 @@
 import { Readonly } from './access'
 
+export interface ObservableStackItem {
+  id: string
+  name: string
+  emitCount: number
+  isError: boolean
+}
+
 /** @internal */
 export type ObservableGetter<T> = () => Readonly<T>
 
 /** @internal */
 export type ObservableSetter<T> = (
   newValue: T | Readonly<T> | ((currentValue: Readonly<T>) => T | Readonly<T>),
-) => void
+  stack?: ObservableStackItem[],
+) => number
 
 /** @internal */
 export type SubscribeFunction<T> = (
-  listener?: (value: Readonly<T>) => void,
-  onError?: (error: Error) => void,
-  onComplete?: () => void,
+  listener?: (value: Readonly<T>, stack?: ObservableStackItem[]) => void,
+  onError?: (error: Error, stack?: ObservableStackItem[]) => void,
+  onComplete?: (stack?: ObservableStackItem[]) => void,
 ) => () => void
 
 /** @internal */
@@ -22,7 +30,9 @@ export interface StreamOption<T = unknown> {
   executeOnCreation?: boolean
 }
 
-export type StreamProjection<T, IsAsync extends boolean = false> = <NewT = unknown>(
+export type StreamProjection<T, IsAsync extends boolean = false> = <
+  NewT = unknown,
+>(
   project: (data: T) => IsAsync extends true ? Promise<NewT> : NewT,
   options?: StreamOption<NewT>,
 ) => Observable<NewT>
@@ -48,10 +58,16 @@ export type CatchErrorOperator<T> = (
 export type ResetOperator = () => void
 
 /** @internal */
-export type EmitOperator = () => void
+export type EmitOperator = (stack?: ObservableStackItem[]) => number
 
 /** @internal */
-export type EmitErrorOperator = (error: Error) => void
+export type EmitErrorOperator = (
+  error: Error,
+  stack?: ObservableStackItem[],
+) => void
+
+/** @internal */
+export type EmitCompleteOperator = (stack?: ObservableStackItem[]) => void
 
 /** @internal */
 export type UnsubscribeFunction = (id: string) => void
@@ -59,7 +75,7 @@ export type UnsubscribeFunction = (id: string) => void
 /** @internal */
 export type MapEntriesReturn<T, P extends string = '$'> = {
   [K in keyof T as `${string & K}${P}`]: Observable<T[K]>
-} 
+}
 
 /** @internal */
 export type MapEntriesOperator<T> = <P extends string = '$'>({
@@ -77,6 +93,7 @@ export interface Observable<T> {
   get: ObservableGetter<T>
   set: ObservableSetter<T>
   setSilent: ObservableSetter<T>
+  getEmitCount: () => number
   subscribe: SubscribeFunction<T>
   subscribeOnce: SubscribeFunction<T>
   subscribeWithValue: SubscribeFunction<T>
@@ -97,11 +114,11 @@ export interface Observable<T> {
   getId: () => string
   emit: EmitOperator
   emitError: EmitErrorOperator
-  emitComplete: () => void
+  emitComplete: EmitCompleteOperator
   mapEntries: MapEntriesOperator<T>
   getInitialValue: GetInitialValueOperator<T>
   guard: (
-    predicate: (previousValue: Readonly<T>, nextValue: Readonly<T>) => boolean
+    predicate: (previousValue: Readonly<T>, nextValue: Readonly<T>) => boolean,
   ) => Observable<T>
 }
 
@@ -113,9 +130,9 @@ export interface CreateObservableParams<T> {
 
 /** @internal */
 export interface ListenerRecord<T> {
-  listener?: (value: Readonly<T>) => void
-  onError?: (error: Error) => void
-  onComplete?: () => void
+  listener?: (value: Readonly<T>, stack?: ObservableStackItem[]) => void
+  onError?: (error: Error, stack?: ObservableStackItem[]) => void
+  onComplete?: (stack?: ObservableStackItem[]) => void
   id: string
   once?: boolean
 }

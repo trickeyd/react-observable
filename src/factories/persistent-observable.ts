@@ -43,7 +43,7 @@ export function createPersistentObservable<T>({
 
   const _setInternal =
     (isSilent: boolean): ObservableSetter<T> =>
-    (newValue) => {
+    (newValue, stack) => {
       const observableName = base.getName()
       if (!observableName || observableName === base.getId()) {
         throw new Error('Persistent observable name is required for set.')
@@ -55,11 +55,11 @@ export function createPersistentObservable<T>({
         (equalityFn && !equalityFn(value, reducedValue as Readonly<T>)) ||
         value === reducedValue
       ) {
-        return
+        return -1
       }
 
-      isSilent ? base.setSilent(reducedValue) : base.set(reducedValue)
       _persistentStorage.setItem(observableName, JSON.stringify(reducedValue))
+      return isSilent ? base.setSilent(reducedValue) : base.set(reducedValue)
     }
 
   const setSilent: ObservableSetter<T> = _setInternal(true)

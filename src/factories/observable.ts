@@ -17,6 +17,8 @@ import {
   TapOperator,
   MapEntriesOperator,
   GetInitialValueOperator,
+  ObservableStackItem,
+  EmitCompleteOperator,
 } from '../types/observable'
 import { Readonly } from '../types/access'
 
@@ -25,43 +27,73 @@ export const createObservable = <T extends unknown>(
     initialValue: undefined,
   },
 ): Observable<T> => {
-  const streamStack: string[] = []
   const id = uuid()
-  let observableName: string = name ?? id
-  let listenerRecords: ListenerRecord<T>[] = []
+
+  let _emitCount = 0
+  let _observableName: string = name ?? id
+  let _listenerRecords: ListenerRecord<T>[] = []
 
   const getInitialValue: GetInitialValueOperator<T> = (): T =>
     isFunction(initialValue) ? initialValue() : (initialValue as T)
+
+  const getEmitCount = (): number => _emitCount
 
   let value: T = getInitialValue()
 
   const get: ObservableGetter<T> = (): Readonly<T> => value as Readonly<T>
 
-  const emit: EmitOperator = () => {
-    const unsubscribeIds = listenerRecords.reduce<string[]>(
+  const emit: EmitOperator = (stack) => {
+    const emitCount = _emitCount++
+    const unsubscribeIds = _listenerRecords.reduce<string[]>(
       (acc, { listener, once, id }) => {
-        listener?.(value as Readonly<T>)
+        listener?.(
+          value as Readonly<T>,
+          stack
+            ? [
+                ...stack,
+                { id, name: _observableName, emitCount, isError: false },
+              ]
+            : undefined,
+        )
         return once ? [...acc, id] : acc
       },
       [] as string[],
     )
     unsubscribeIds.forEach((id) => unsubscribe(id))
+    return emitCount
   }
 
-  const emitError: EmitErrorOperator = (err: Error) =>
-    listenerRecords.forEach(({ onError }) => onError?.(err))
+  const emitError: EmitErrorOperator = (err: Error, stack) => {
+    const emitCount = _emitCount++
+    _listenerRecords.forEach(({ onError }) =>
+      onError?.(
+        err,
+        stack
+          ? [...stack, { id, name: _observableName, emitCount, isError: true }]
+          : undefined,
+      ),
+    )
+  }
 
   /**
    * emitComplete notifies all subscribers that the stream has completed successfully.
    * After calling emitComplete, no further values or errors will be emitted.
    * Subscribers can provide an onComplete callback to react to stream completion.
    */
-  const emitComplete: () => void = () =>
-    listenerRecords.forEach(({ onComplete }) => onComplete?.())
+  const emitComplete: EmitCompleteOperator = (stack) => {
+    const emitCount = _emitCount++
+    _listenerRecords.forEach(({ onComplete }) =>
+      onComplete?.(
+        stack
+          ? [...stack, { id, name: _observableName, emitCount, isError: false }]
+          : undefined,
+      ),
+    )
+  }
 
   const _setInternal =
     (isSilent: boolean): ObservableSetter<T> =>
-    (newValue) => {
+    (newValue, stack) => {
       const reducedValue: T = (
         isFunction(newValue) ? newValue(get()) : newValue
       ) as T
@@ -71,19 +103,19 @@ export const createObservable = <T extends unknown>(
           !equalityFn(value as Readonly<T>, reducedValue as Readonly<T>)) ||
         value === reducedValue
       ) {
-        return
+        return -1
       }
 
       value = reducedValue
-      isSilent && emit()
+      return isSilent ? -1 : emit(stack)
     }
 
-  const set: ObservableSetter<T> = _setInternal(true)
-  const setSilent: ObservableSetter<T> = _setInternal(false)
+  const set: ObservableSetter<T> = _setInternal(false)
+  const setSilent: ObservableSetter<T> = _setInternal(true)
 
   const subscribe: SubscribeFunction<T> = (listener, onError, onComplete) => {
     const id = uuid() as string
-    listenerRecords.push({ listener, onError, id, once: false, onComplete })
+    _listenerRecords.push({ listener, onError, id, once: false, onComplete })
     return () => unsubscribe(id)
   }
 
@@ -93,7 +125,7 @@ export const createObservable = <T extends unknown>(
     onComplete,
   ) => {
     const id = uuid() as string
-    listenerRecords.push({ listener, onError, id, once: true, onComplete })
+    _listenerRecords.push({ listener, onError, id, once: true, onComplete })
     return () => unsubscribe(id)
   }
 
@@ -110,7 +142,7 @@ export const createObservable = <T extends unknown>(
   }
 
   const unsubscribe: UnsubscribeFunction = (id: string) => {
-    listenerRecords = listenerRecords.filter((lr) => lr.id !== id)
+    _listenerRecords = _listenerRecords.filter((lr) => lr.id !== id)
   }
 
   const combineLatestFrom = <U extends unknown[]>(
@@ -139,12 +171,12 @@ export const createObservable = <T extends unknown>(
 
     subscribeFunctions.forEach((sub, i) => {
       sub(
-        (val: U[keyof U]) => {
+        (val: U[keyof U], stack?: ObservableStackItem[]) => {
           combinationObservable$.set((values) => {
             const clone = [...values]
             clone[i] = val as CombinedValues[number]
             return clone as CombinedValues
-          })
+          }, stack)
         },
         (err: Error) => combinationObservable$.emitError(err),
       )
@@ -166,12 +198,12 @@ export const createObservable = <T extends unknown>(
     })
 
     subscribe(
-      (sourceValue: Readonly<T>) => {
+      (sourceValue: Readonly<T>, stack?: ObservableStackItem[]) => {
         const combined = [
           sourceValue,
           ...observables.map((obs) => obs.get()),
         ] as CombinedValues
-        resultObservable$.set(combined)
+        resultObservable$.set(combined, stack)
       },
       resultObservable$.emitError,
       resultObservable$.emitComplete,
@@ -194,7 +226,7 @@ export const createObservable = <T extends unknown>(
     })
 
     ;(executeOnCreation ? subscribeWithValue : subscribe)(
-      (data: Readonly<T>) => {
+      (data: Readonly<T>, stack?: ObservableStackItem[]) => {
         const [newData, projectError] = tryCatchSync<NewT>(
           () => project(data),
           `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`,
@@ -202,7 +234,7 @@ export const createObservable = <T extends unknown>(
         if (projectError) {
           newObservable$.emitError(projectError as Error)
         } else {
-          newObservable$.set(newData as NewT)
+          newObservable$.set(newData as NewT, stack)
         }
       },
       (err: Error) => newObservable$.emitError(err),
@@ -226,7 +258,10 @@ export const createObservable = <T extends unknown>(
       name,
     })
 
-    const projectToNewObservable = async (data: Readonly<T>) => {
+    const projectToNewObservable = async (
+      data: Readonly<T>,
+      stack?: ObservableStackItem[],
+    ) => {
       const [newData, error] = await tryCatch<NewT>(
         () => project(data),
         `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`,
@@ -234,7 +269,7 @@ export const createObservable = <T extends unknown>(
       if (error) {
         newObservable$.emitError(error)
       } else {
-        newObservable$.set(newData as NewT)
+        newObservable$.set(newData as NewT, stack)
       }
     }
 
@@ -260,9 +295,9 @@ export const createObservable = <T extends unknown>(
     })
 
     subscribe(
-      async (val) => {
+      async (val, stack) => {
         await new Promise((r) => setTimeout(r, milliseconds))
-        newObservable$.set(val as T)
+        newObservable$.set(val as T, stack)
       },
       newObservable$.emitError,
       newObservable$.emitComplete,
@@ -341,7 +376,7 @@ export const createObservable = <T extends unknown>(
     }
 
     subscribe(
-      (val) => newObservable$.set(val),
+      (val, stack) => newObservable$.set(val, stack),
       handleError,
       newObservable$.emitComplete,
     )
@@ -357,10 +392,10 @@ export const createObservable = <T extends unknown>(
 
     // Subscribe to the original observable
     observable.subscribe(
-      (nextValue) => {
+      (nextValue, stack) => {
         const prevValue = guardedObservable.get()
         if (predicate(prevValue, nextValue)) {
-          guardedObservable.set(nextValue)
+          guardedObservable.set(nextValue, stack)
         } else {
           // The value is not passed through, but an error must be
           guardedObservable.emitComplete()
@@ -375,10 +410,10 @@ export const createObservable = <T extends unknown>(
 
   const reset = () => set(getInitialValue() as T)
 
-  const getName = () => observableName
+  const getName = () => _observableName
 
   const setName = (name: string) => {
-    observableName = name
+    _observableName = name
   }
 
   const getId = (): string => id
@@ -387,6 +422,7 @@ export const createObservable = <T extends unknown>(
     get,
     set,
     setSilent,
+    getEmitCount,
     subscribe,
     subscribeOnce,
     subscribeWithValue,
