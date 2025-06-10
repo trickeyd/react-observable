@@ -25,14 +25,10 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
         const run = () => {
             const executionId = (0, general_1.uuid)();
             const entryEmitCount = entry$.getEmitCount();
-            console.log('execute - run', executionId, entryEmitCount);
             const unsubscribe = exit$.subscribe((data, stack) => {
-                console.log('isssssssss - 1', executionId, entryEmitCount);
                 const isAppropriateStream = stack
                     ? (0, stream_1.getIsAppropriateStream)(stack, executionId, entryEmitCount)
                     : false;
-                console.log('isssssssss - 2', executionId, entryEmitCount);
-                console.log('isAppropriateStream', isAppropriateStream, stack, executionId, entryEmitCount);
                 if (isAppropriateStream) {
                     resolve([data, undefined]);
                     unsubscribe();
@@ -41,7 +37,6 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
                 const isAppropriateStream = stack
                     ? (0, stream_1.getIsAppropriateStream)(stack, executionId, entryEmitCount)
                     : false;
-                console.log('isAppropriateStream error', isAppropriateStream, stack);
                 if (isAppropriateStream) {
                     onError && onError(error, stack);
                     resolve([undefined, error]);
@@ -51,7 +46,6 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
                 const isAppropriateStream = stack
                     ? (0, stream_1.getIsAppropriateStream)(stack, executionId, entryEmitCount)
                     : false;
-                console.log('isAppropriateStream complete', isAppropriateStream, stack);
                 if (isAppropriateStream) {
                     resolve([undefined, undefined]);
                     unsubscribe();
@@ -71,13 +65,10 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
         };
         if (!isInitialised.get()) {
             if (!!create_store_1.store$.get()) {
-                console.log('execute 2');
                 initialiseStream(create_store_1.store$.get());
             }
             else {
-                console.log('execute 2.5');
                 create_store_1.store$.subscribeOnce((store) => {
-                    console.log('execute 3');
                     initialiseStream(store);
                 });
             }

@@ -53,21 +53,12 @@ export const createStream = <ReturnT, InputT = undefined>(
       const run = () => {
         const executionId = uuid()
         const entryEmitCount = entry$.getEmitCount()
-        console.log('execute - run', executionId, entryEmitCount)
+
         const unsubscribe = exit$.subscribe(
           (data, stack) => {
-            console.log('isssssssss - 1', executionId, entryEmitCount)
             const isAppropriateStream = stack
               ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
-            console.log('isssssssss - 2', executionId, entryEmitCount)
-            console.log(
-              'isAppropriateStream',
-              isAppropriateStream,
-              stack,
-              executionId,
-              entryEmitCount,
-            )
             if (isAppropriateStream) {
               resolve([data as ReturnT, undefined])
               unsubscribe()
@@ -78,7 +69,6 @@ export const createStream = <ReturnT, InputT = undefined>(
             const isAppropriateStream = stack
               ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
-            console.log('isAppropriateStream error', isAppropriateStream, stack)
             if (isAppropriateStream) {
               onError && onError(error, stack)
               resolve([undefined, error])
@@ -90,11 +80,6 @@ export const createStream = <ReturnT, InputT = undefined>(
             const isAppropriateStream = stack
               ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
-            console.log(
-              'isAppropriateStream complete',
-              isAppropriateStream,
-              stack,
-            )
             if (isAppropriateStream) {
               resolve([undefined, undefined])
               unsubscribe()
@@ -116,12 +101,9 @@ export const createStream = <ReturnT, InputT = undefined>(
 
       if (!isInitialised.get()) {
         if (!!store$.get()) {
-          console.log('execute 2')
           initialiseStream(store$.get())
         } else {
-          console.log('execute 2.5')
           store$.subscribeOnce((store: Safe<Store>) => {
-            console.log('execute 3')
             initialiseStream(store)
           })
         }

@@ -57,7 +57,6 @@ export const createObservable = <T extends unknown>(
 
   const emit: EmitOperator = (stack) => {
     const newStack = createStack(stack)
-    console.log('emit - newStack', newStack)
     const unsubscribeIds = _listenerRecords.reduce<string[]>(
       (acc, { listener, once, id }) => {
         listener?.(value as Readonly<T>, newStack)
@@ -262,7 +261,6 @@ export const createObservable = <T extends unknown>(
         () => project(data),
         `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`,
       )
-      console.log('newData', newData, error)
       if (error) {
         newObservable$.emitError(error, stack)
       } else {
