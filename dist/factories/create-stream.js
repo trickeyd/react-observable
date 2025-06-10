@@ -25,6 +25,7 @@ const createStream = (initialise, { onError, initialValue, result$ } = {}) => {
         const run = () => {
             const executionId = (0, general_1.uuid)();
             const entryEmitCount = entry$.getEmitCount();
+            console.log('execute - run', executionId, entryEmitCount);
             const unsubscribe = exit$.subscribe((data, stack) => {
                 const isAppropriateStream = stack
                     ? (0, stream_1.getIsAppropriateStream)(stack, executionId, entryEmitCount)

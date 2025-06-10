@@ -58,8 +58,8 @@ export const shallowEqual = (a: unknown, b: unknown): boolean => {
 
 let uuidCounter = 0
 export function uuid() {
-  if (++uuidCounter >= Number.MAX_SAFE_INTEGER) {
+  if (uuidCounter >= Number.MAX_SAFE_INTEGER) {
     uuidCounter = 0
   }
-  return `${Date.now()}-${uuidCounter}`
+  return `${Date.now()}-${++uuidCounter}`
 }
