@@ -28,7 +28,7 @@ export const tryCatchSync = <T>(
     }
     return [undefined as T, err]
   }
-} 
+}
 
 export const identity = <T>(value: T): T => value
 
@@ -56,9 +56,10 @@ export const shallowEqual = (a: unknown, b: unknown): boolean => {
   })
 }
 
+let uuidCounter = 0
 export function uuid() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
+  if (++uuidCounter >= Number.MAX_SAFE_INTEGER) {
+    uuidCounter = 0
+  }
+  return `${Date.now()}-${uuidCounter}`
 }

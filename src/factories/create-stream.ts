@@ -4,6 +4,7 @@ import { Store } from '../types/store'
 import { store$ } from '../store/create-store'
 import { Safe } from '../types/access'
 import { getIsAppropriateStream } from '../utils/stream'
+import { uuid } from '../utils/general'
 
 interface Props<ReturnT> {
   onError?: (err: Error, stack?: ObservableStackItem[]) => void
@@ -32,7 +33,6 @@ export const createStream = <ReturnT, InputT = undefined>(
   const entry$ = createObservable<InputT>({ initialValue: undefined })
   const exit$ = createObservable<ReturnT>({ initialValue })
   const isInitialised = createObservable<boolean>({ initialValue: false })
-  const entryId = entry$.getId()
 
   if (result$) {
     // we don't really need to pass the error on to the result
@@ -51,10 +51,12 @@ export const createStream = <ReturnT, InputT = undefined>(
   const execute = (payload?: InputT): Promise<ExecuteReturnType<ReturnT>> =>
     new Promise((resolve) => {
       const run = () => {
+        const executionId = uuid()
+        const entryEmitCount = entry$.getEmitCount()
         const unsubscribe = exit$.subscribe(
           (data, stack) => {
             const isAppropriateStream = stack
-              ? getIsAppropriateStream(stack, entryId, entryEmitCount)
+              ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
             console.log('isAppropriateStream', isAppropriateStream, stack)
             if (isAppropriateStream) {
@@ -65,7 +67,7 @@ export const createStream = <ReturnT, InputT = undefined>(
 
           (error, stack) => {
             const isAppropriateStream = stack
-              ? getIsAppropriateStream(stack, entryId, entryEmitCount)
+              ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
             console.log('isAppropriateStream error', isAppropriateStream, stack)
             if (isAppropriateStream) {
@@ -77,7 +79,7 @@ export const createStream = <ReturnT, InputT = undefined>(
 
           (stack) => {
             const isAppropriateStream = stack
-              ? getIsAppropriateStream(stack, entryId, entryEmitCount)
+              ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
             console.log(
               'isAppropriateStream complete',
@@ -93,7 +95,14 @@ export const createStream = <ReturnT, InputT = undefined>(
         if (payload) {
           entry$.setSilent(payload)
         }
-        const entryEmitCount = entry$.emit()
+        entry$.emit([
+          {
+            id: executionId,
+            name: `createStream:${executionId}`,
+            emitCount: entryEmitCount,
+            isError: false,
+          },
+        ])
       }
 
       if (!isInitialised.get()) {
