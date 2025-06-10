@@ -143,7 +143,7 @@ const createObservable = ({ initialValue, equalityFn, name } = {
         const projectToNewObservable = async (data, stack) => {
             const [newData, error] = await (0, general_2.tryCatch)(() => project(data), `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`);
             if (error) {
-                newObservable$.emitError(error);
+                newObservable$.emitError(error, stack);
             }
             else {
                 newObservable$.set(newData, stack);
@@ -202,18 +202,18 @@ const createObservable = ({ initialValue, equalityFn, name } = {
             initialValue: get(),
             name: `${name}_catchError`,
         });
-        const handleError = (error) => {
+        const handleError = (error, stack) => {
             if (onError) {
                 try {
                     onError(error, get(), set);
-                    newObservable$.emitComplete();
+                    newObservable$.emitComplete(stack);
                 }
                 catch (err) {
-                    newObservable$.emitError(err);
+                    newObservable$.emitError(err, stack);
                 }
             }
             else {
-                newObservable$.emitComplete();
+                newObservable$.emitComplete(stack);
             }
         };
         subscribe((val, stack) => newObservable$.set(val, stack), handleError, newObservable$.emitComplete);

@@ -267,7 +267,7 @@ export const createObservable = <T extends unknown>(
         `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`,
       )
       if (error) {
-        newObservable$.emitError(error)
+        newObservable$.emitError(error, stack)
       } else {
         newObservable$.set(newData as NewT, stack)
       }
@@ -362,16 +362,16 @@ export const createObservable = <T extends unknown>(
       name: `${name}_catchError`,
     })
 
-    const handleError = (error: Error) => {
+    const handleError = (error: Error, stack?: ObservableStackItem[]) => {
       if (onError) {
         try {
           onError(error, get() as Readonly<T>, set)
-          newObservable$.emitComplete()
+          newObservable$.emitComplete(stack)
         } catch (err) {
-          newObservable$.emitError(err as Error)
+          newObservable$.emitError(err as Error, stack)
         }
       } else {
-        newObservable$.emitComplete()
+        newObservable$.emitComplete(stack)
       }
     }
 
