@@ -17,7 +17,7 @@ type ExecuteReturnType<T> =
   | [undefined, Error]
   | [undefined, undefined]
 
-export const createStream = <ReturnT, InputT = undefined>(
+export const createCommandStream = <ReturnT, InputT = undefined>(
   initialise: ({
     $,
     store,

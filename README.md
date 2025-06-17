@@ -1,6 +1,37 @@
 # @idiosync/react-observable
 
-A lightweight state management library for React applications that provides a simple and powerful way to handle reactive state.
+A lightweight, type-safe, and reactive state management library for React applications. Designed for composability, streams, and ergonomic integration with React hooks and context.
+
+## Features
+
+- Simple, intuitive, and type-safe API
+- Reactive state management with observables and streams
+- Command streams for side-effectful actions
+- React context integration for global stores
+- Flexible hooks for value, effect, and observable access
+- Persistent state storage (e.g., AsyncStorage)
+- Error handling and stream completion
+- Deep readonly types for immutability
+
+## Why Not Redux? (What This Library Fixes)
+
+While Redux is a powerful and popular state management solution, it comes with several pain points that @idiosync/react-observable is designed to solve:
+
+- **Boilerplate Overhead:** Redux requires a lot of setup—actions, reducers, action types, selectors, and middleware. With react-observable, you create and use observables directly, with minimal ceremony.
+- **Async Flow Complexity:** Handling async logic in Redux (with thunks, sagas, or middleware) is verbose and often hard to follow. This library provides command streams and async stream operators for natural, readable async flows.
+- **Reactivity:** Redux state updates are synchronous and require manual subscription/selectors. Observables are inherently reactive—components update automatically when values change, and you can compose streams for derived state.
+- **Ergonomics:** Redux's API is not ergonomic for modern React. This library provides hooks that feel like React, with dependency arrays, context, and direct observable access.
+- **Type Safety:** Redux can be type-safe, but it requires a lot of manual typing. This library is type-safe by default, with deep readonly types and automatic inference.
+- **No More Action Types/Reducers:** You don't need to define action types, reducers, or switch statements. Just use streams, commands, and observables.
+- **Better Side Effect Handling:** Side effects are first-class citizens via command streams and async operators, not bolted on with middleware.
+- **Persistent State:** Built-in support for persistent observables (e.g., AsyncStorage) without extra libraries or boilerplate.
+
+**In summary:**
+
+- Less boilerplate
+- More natural async and reactive flows
+- Modern, ergonomic React API
+- Type safety and persistence out of the box
 
 ## Installation
 
@@ -10,46 +41,20 @@ npm install @idiosync/react-observable
 yarn add @idiosync/react-observable
 ```
 
-## Features
+## Quick Start
 
-- Simple and intuitive API
-- Type-safe with TypeScript
-- Reactive state management
-- Stream-based data flow
-- Error handling
-- Automatic type inference
-- Deep readonly types for immutability
-- Persistent state storage with AsyncStorage
-- React context integration
-
-## Usage
-
-### Creating an Observable
+### 1. Creating an Observable
 
 ```typescript
 import { createObservable } from '@idiosync/react-observable'
 
-const counter$ = createObservable({
-  initialValue: 0,
-  name: 'counter'
-})
+const counter$ = createObservable({ initialValue: 0 })
 
-// Get the current value
-const currentValue = counter$.get()
-
-// Set a new value
 counter$.set(1)
-
-// Set using a function
-counter$.set(current => current + 1)
-
-// Subscribe to changes
-const unsubscribe = counter$.subscribe(value => {
-  console.log('Counter changed:', value)
-})
+counter$.subscribe((value) => console.log('Counter:', value))
 ```
 
-### Creating a Persistent Observable
+### 2. Creating a Persistent Observable
 
 ```typescript
 import { createPersistentObservable } from '@idiosync/react-observable'
@@ -57,37 +62,31 @@ import { createPersistentObservable } from '@idiosync/react-observable'
 const settings$ = createPersistentObservable({
   initialValue: { theme: 'light', fontSize: 16 },
   name: 'app-settings',
-  // Optional: Custom merge function for hydration
-  mergeOnHydration: (initial, persisted) => ({
-    ...initial,
-    ...persisted,
-    // Ensure certain fields are always present
-    theme: persisted.theme || initial.theme,
-  })
 })
 
-// Wait for hydration to complete
+// Wait for hydration
 await settings$.rehydrate()
-
-// The value will persist between app restarts
-settings$.set({ theme: 'dark' })
 ```
 
-### Using with React Context
+### 3. Creating an Observable Store
 
 ```typescript
-import { createObservableStore, ReactObservableProvider } from '@idiosync/react-observable'
+import { createObservableStore } from '@idiosync/react-observable'
 
-// Create your store
 const store = createObservableStore({
   counter: createObservable({ initialValue: 0 }),
   settings: createPersistentObservable({
     initialValue: { theme: 'light' },
-    name: 'app-settings'
-  })
+    name: 'settings',
+  }),
 })
+```
 
-// Wrap your app with the provider
+### 4. React Context Integration
+
+```typescript
+import { ReactObservableProvider } from '@idiosync/react-observable'
+
 function App() {
   return (
     <ReactObservableProvider store={store} loading={<LoadingSpinner />}>
@@ -95,234 +94,138 @@ function App() {
     </ReactObservableProvider>
   )
 }
+```
 
-// Use the store in your components
+## React Hooks
+
+### useObservableValue
+
+Get the current value of an observable and subscribe reactively.
+
+```typescript
+import { useObservableValue } from '@idiosync/react-observable'
+
 function Counter() {
-  const store = useContext(ReactObservableContext)
-  const counter$ = store?.counter
-
-  useEffect(() => {
-    const unsubscribe = counter$?.subscribe(value => {
-      console.log('Counter changed:', value)
-    })
-    return () => unsubscribe?.()
-  }, [counter$])
-
-  return (
-    <button onClick={() => counter$?.set(c => c + 1)}>
-      Count: {counter$?.get()}
-    </button>
-  )
+  const count = useObservableValue(({ store }) => store.counter)
+  return <div>Count: {count}</div>
 }
 ```
 
-### Creating a Stream
+### useEffectStream
+
+Create a derived value or effectful stream that reacts to a dependency array.
 
 ```typescript
-const doubled$ = counter$.stream(
-  value => value * 2,
-  { name: 'doubled' }
+import { useEffectStream } from '@idiosync/react-observable'
+
+function DoubledCounter({ multiplier }) {
+  const doubled = useEffectStream(
+    ({ $, store }) => store.counter.stream(count => count * multiplier),
+    [multiplier]
+  )
+  return <div>Doubled: {doubled}</div>
+}
+```
+
+### useStoreObservable
+
+Access a raw observable from the store (not proxied, not value).
+
+```typescript
+import { useStoreObservable } from '@idiosync/react-observable'
+
+function RawCounter() {
+  const counter$ = useStoreObservable(({ store }) => store.counter)
+  // You can now use counter$ directly (subscribe, set, etc.)
+}
+```
+
+## Command Streams
+
+### createCommandStream
+
+Create a command stream for side-effectful actions (e.g., API calls, orchestrations).
+
+```typescript
+import { createCommandStream } from '@idiosync/react-observable'
+
+const fetchUser = createCommandStream(({ $, store }) =>
+  $.streamAsync(async ([userId]) => {
+    // ...fetch user logic
+    return userData
+  }),
 )
 
-// Subscribe to the stream
-doubled$.subscribe(value => {
-  console.log('Doubled value:', value)
-})
+// Usage in a component
+async function handleFetch() {
+  const [user, error] = await fetchUser('user-id')
+}
 ```
 
-### Creating an Observable Store
+## Context API
 
 ```typescript
-import { createObservableStore } from '@idiosync/react-observable'
+import { ReactObservableProvider, ReactObservableContext } from '@idiosync/react-observable'
 
-const store = createObservableStore({
-  counter: createObservable({ initialValue: 0 }),
-  user: createObservable({ initialValue: null })
-})
+// Wrap your app
+<ReactObservableProvider store={store}>
+  <App />
+</ReactObservableProvider>
 
-// Access observables
-const counter$ = store.counter
-const user$ = store.user
+// Access the store directly (advanced)
+const store = useContext(ReactObservableContext)
 ```
 
-### Combining Observables
+## Error Handling
+
+Use `.catchError` on observables or streams to handle errors gracefully.
 
 ```typescript
-const combined$ = counter$.combineLatestFrom(user$)
-combined$.subscribe(([counter, user]) => {
-  console.log('Counter:', counter, 'User:', user)
+counter$.catchError((error, currentValue, set) => {
+  // Handle or log error
+  set(0) // fallback
 })
 ```
-
-### Error Handling
-
-```typescript
-const safe$ = counter$.catchError((error, currentValue, setter) => {
-  console.error('Error occurred:', error)
-  // Optionally set a fallback value
-  setter(0)
-})
-```
-
-## Error Handling with `catchError`
-
-The `catchError` operator allows you to intercept and handle errors in an observable stream. Its design is intended to:
-
-- Allow you to throw a new error at any catch boundary for better debugging (e.g., to mark a specific problem section of your stream).
-- Forward the original error if you wish.
-- Do nothing, in which case the stream will complete gracefully (via `emitComplete`).
-
-This approach enables you to use `throw` liberally throughout your stream logic, and to pinpoint problem sections by throwing custom errors at any `catchError` boundary.
-
-### Usage Example
-
-```ts
-observable
-  .streamAsync(async (value) => {
-    if (value < 0) throw new Error('Negative value!');
-    return value * 2;
-  })
-  .catchError((error, currentValue, set) => {
-    // You can throw a new error for this section
-    if (error.message.includes('Negative')) {
-      throw new Error('CustomSectionError: Negative encountered in stream!');
-    }
-    // Or forward the original error
-    throw error;
-    // Or do nothing to suppress and allow the stream to complete
-  });
-```
-
-**Notes:**
-- If you throw a new error in the handler, it will be emitted downstream.
-- If you do nothing, the stream will complete gracefully (no special error is emitted).
-- Downstream `catchError` handlers will receive only real errors; completion is handled via `onComplete`.
 
 ## Stream Completion
 
-You can signal that a stream has finished its work (successfully) using the `emitComplete` method. Subscribers can provide an `onComplete` callback to react to this event. After completion, no further values or errors will be emitted.
+Signal that a stream has finished using `emitComplete`.
 
-### Usage Example
-
-```ts
-const obs$ = createObservable({ initialValue: 0 });
-
-const unsubscribe = obs$.subscribe(
-  value => console.log('Value:', value),
-  error => console.error('Error:', error),
-  () => console.log('Stream completed!')
-);
-
-obs$.set(1);
-obs$.set(2);
-obs$.emitComplete(); // "Stream completed!" is logged
-obs$.set(3); // No effect, stream is closed
+```typescript
+const obs$ = createObservable({ initialValue: 0 })
+obs$.emitComplete()
 ```
-
-**Notes:**
-- `emitComplete` notifies all subscribers that the stream has completed.
-- After completion, the observable will not emit further values or errors.
-- This is useful for resource cleanup and signaling the end of a process.
 
 ## API Reference
 
-### Type Augmentations
+### Observables
 
-To use type augmentations with the library, you'll need to:
+- `createObservable<T>(config): Observable<T>`
+- `createPersistentObservable<T>(config): PersistentObservable<T>`
+- `createObservableStore(config): Store`
+- `combineLatestFrom(...observables): Observable<[...values]>`
+- `.subscribe(listener, onError?, onComplete?)`
+- `.set(value)`
+- `.get()`
+- `.stream(project, options?)`
+- `.catchError(handler)`
+- `.emitComplete()`
 
-1. Create a type declaration file (e.g., `src/types/augmentations/react-observable.d.ts`):
-```typescript
-declare module '@idiosync/react-observable' {
-  // Your type augmentations here
-}
-```
+### Hooks
 
-2. Add the path to your `tsconfig.json`:
-```json
-{
-  "compilerOptions": {
-    "typeRoots": [
-      "./node_modules/@types",
-      "./src/types/augmentations"
-    ]
-  }
-}
-```
+- `useObservableValue(initialiser)`
+- `useEffectStream(initialiser, dependencies)`
+- `useStoreObservable(initialiser)`
 
-3. Import the type declarations in your app's entry point (e.g., `index.js` or `index.ts`):
-```typescript
-import './src/types/augmentations/react-observable.d'
-```
+### Command Streams
 
-This allows you to extend the library's types while maintaining type safety.
+- `createCommandStream(initialiser, options?)`
 
-### createObservable
+### Context
 
-Creates a new observable with the given configuration.
-
-```typescript
-createObservable<T>({
-  initialValue?: T | (() => T),
-  equalityFn?: (a: T, b: T) => boolean,
-  name?: string
-}): Observable<T>
-```
-
-### createPersistentObservable
-
-Creates a new persistent observable that saves its state to AsyncStorage.
-
-```typescript
-createPersistentObservable<T>({
-  initialValue: T | (() => T),
-  name: string,
-  equalityFn?: (a: T, b: T) => boolean,
-  mergeOnHydration?: (initialValue: T, persisted: unknown) => T
-}): PersistentObservable<T>
-```
-
-### Observable Methods
-
-- `get()`: Get the current value
-- `set(value: T | ((current: T) => T), forceEmit?: boolean)`: Set a new value
-- `subscribe(listener?: (value: T) => void, onError?: (error: Error) => void)`: Subscribe to changes
-- `stream<T>(project: (value: T) => T, options?: StreamOptions)`: Create a new stream
-- `combineLatestFrom(...observables)`: Combine with other observables
-- `catchError(onError?: (error: Error, currentValue: T, setter: (value: T) => void) => void)`: Handle errors
-
-### PersistentObservable Methods
-
-In addition to all Observable methods, PersistentObservable includes:
-- `rehydrate(): Promise<void>`: Wait for the initial state to be loaded from storage
-- `reset()`: Reset to the initial value and clear storage
-
-### createObservableStore
-
-Creates a store containing multiple observables.
-
-```typescript
-createObservableStore<Store>(config: ObservableStoreConfig<Store>): ObservableStore<Store>
-```
-
-### React Context
-
-The library provides React context integration through:
-
-```typescript
-ReactObservableProvider: React.FC<{
-  store: ObservableStore<unknown>
-  children: ReactNode
-  loading?: ReactNode
-}>
-
-ReactObservableContext: React.Context<ObservableStore<unknown> | null>
-```
-
-The provider automatically handles:
-- Loading states for persistent observables
-- Context distribution
-- Type safety with TypeScript
+- `ReactObservableProvider`
+- `ReactObservableContext`
 
 ## License
 
-MIT 
+MIT

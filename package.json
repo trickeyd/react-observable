@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "1.0.80",
+  "version": "1.1.0",
   "description": "State management control layer for React projects",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,8 +14,7 @@
     "prepare": "yarn build",
     "version:patch": "yarn version --patch --yes",
     "git:stage-commit": "git add -A && git commit -m 'chore: bump version'",
-    "git:push": "git push --follow-tags",
-    "pub": "yarn build &&yarn git:stage-commit && yarn version:patch && yarn git:push"
+    "git:push": "git push --follow-tags"
   },
   "files": [
     "dist"

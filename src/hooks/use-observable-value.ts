@@ -5,15 +5,13 @@ import { useStoreProxy } from './use-store-proxy'
 import { wrapObservable } from '../utils/stream'
 import { Store } from '../types/store'
 
-type ObservableValue<O> = O extends Observable<infer T> ? T : never;
+type ObservableValue<O> = O extends Observable<infer T> ? T : never
 
-export function useObservable<
-  O extends Observable<any>
->(
+export function useObservableValue<O extends Observable<any>>(
   initialise: (args: {
-    store: Store,
+    store: Store
     wrapObservable: <T = unknown>(observable: Observable<T>) => Observable<T>
-  }) => O
+  }) => O,
 ): ObservableValue<O> {
   const ref = useRef<O | undefined>(undefined)
   const subscriptionsRef = useRef<(() => void)[]>([])
@@ -24,9 +22,12 @@ export function useObservable<
 
   const observableStoreProxy = useStoreProxy(handleSubscription)
 
-  const handleWrapObservable = useCallback(<T = unknown>(observable: Observable<T>) => {
-    return wrapObservable<T>(observable, handleSubscription)
-  }, [])
+  const handleWrapObservable = useCallback(
+    <T = unknown>(observable: Observable<T>) => {
+      return wrapObservable<T>(observable, handleSubscription)
+    },
+    [],
+  )
 
   if (!ref.current) {
     ref.current = initialise({
@@ -50,4 +51,4 @@ export function useObservable<
   }, [])
 
   return data
-} 
+}
