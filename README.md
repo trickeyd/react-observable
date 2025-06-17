@@ -279,16 +279,103 @@ counter$
 
 ### Observables
 
-- `createObservable<T>(config): Observable<T>`
-- `createPersistentObservable<T>(config): PersistentObservable<T>`
-- `createObservableStore(config): Store`
-- `combineLatestFrom(...observables): Observable<[...values]>`
-- `.subscribe(listener, onError?, onComplete?)`
-- `.set(value)`
-- `.get()`
-- `.stream(project, options?)`
-- `.catchError(handler)`
-- `.emitComplete()`
+- **`createObservable<T>(config): Observable<T>`**  
+  Create a new observable with an initial value.
+
+  ```typescript
+  const counter$ = createObservable({ initialValue: 0 })
+  ```
+
+- **`createPersistentObservable<T>(config): PersistentObservable<T>`**  
+  Create a persistent observable that syncs with async storage.
+
+  ```typescript
+  const settings$ = createPersistentObservable({
+    initialValue: { theme: 'light' },
+  })
+  ```
+
+- **`createObservableStore(config): Store`**  
+  Create a store composed of multiple store modules.
+
+#### Observable Instance Methods
+
+- **`.get()`**  
+  Get the current value of the observable.
+
+  ```typescript
+  const value = counter$.get()
+  ```
+
+- **`.set(value)`**  
+  Set a new value (or updater function) for the observable.
+
+  ```typescript
+  counter$.set(5)
+  counter$.set((current) => current + 1)
+  ```
+
+- **`.subscribe(listener, onError?, onComplete?)`**  
+  Subscribe to value changes, errors, or completion. Returns an unsubscribe function.
+
+  ```typescript
+  const unsubscribe = counter$.subscribe(
+    (value) => console.log('Value:', value),
+    (error) => console.error('Error:', error),
+    () => console.log('Completed!'),
+  )
+  // Later: unsubscribe()
+  ```
+
+- **`.stream(project, options?)`**  
+  Create a derived observable (stream) from this observable, and project a new value.
+
+  ```typescript
+  const doubled$ = counter$.stream((value) => value * 2)
+  ```
+
+- **`.streamAsync(asyncProject, options?)`**  
+  Create a derived observable (stream) from this observable using an async function. Useful for async transformations or side effects.
+
+  ```typescript
+  const userData$ = userId$.streamAsync(async (userId) => {
+    const user = await fetchUser(userId)
+    return user
+  })
+  ```
+
+- **`.withLatestFrom(...observables)`**  
+  Create a stream that emits tuples of the latest values from this and other observables.
+
+  ```typescript
+  const combined$ = counter$.withLatestFrom(settings$)
+  ```
+
+- **`combineLatestFrom(...observables): Observable<[...values]>`**  
+  Combine multiple observables into one that emits arrays of their latest values.
+
+  ```typescript
+  const combined$ = counter$.combineLatestFrom(settings$)
+  ```
+
+- **`.catchError(handler)`**  
+  Handle errors thrown in streams or async operations.
+
+  ```typescript
+  counter$
+    .stream((val) => {
+      if (val < 0) throw new Error('Negative!')
+      return val
+    })
+    .catchError((error, current, set) => set(0))
+  ```
+
+- **`.reset()`**  
+  Reset the observable to its initial value.
+
+  ```typescript
+  counter$.reset()
+  ```
 
 ### Hooks
 
