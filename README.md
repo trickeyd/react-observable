@@ -233,9 +233,13 @@ const fetchUser = createCommandStream(({ $, store }) =>
 )
 
 // Usage in a component
-async function handleFetch() {
+const handleFetch = useCallback(async () => {
   const [user, error] = await fetchUser('user-id')
-}
+  if (error) {
+    // handle error if needed
+  }
+  setSomeState(user)
+}, [])
 ```
 
 ## Context API
