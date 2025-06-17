@@ -12,6 +12,7 @@ export * from './hooks/use-equality-checker'
 export * from './factories/create-command-stream'
 export { createObservable } from './factories/observable'
 export { createPersistentObservable } from './factories/persistent-observable'
+export * from './types/persistence'
 export {
   ReactObservableProvider,
   ReactObservableContext,

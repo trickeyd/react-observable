@@ -43,18 +43,87 @@ yarn add @idiosync/react-observable
 
 ## Quick Start
 
-### 1. Creating an Observable
+### 1. Create Store Modules
+
+Create a module for each part of your store, exporting all the individual observables. It is best to use many observables, rather than to put many properties into each one, as this will result in more targeted updates throughout your app.
 
 ```typescript
+// src/store/modules/timing.ts
 import { createObservable } from '@idiosync/react-observable'
 
-const counter$ = createObservable({ initialValue: 0 })
-
-counter$.set(1)
-counter$.subscribe((value) => console.log('Counter:', value))
+export const counter$ = createObservable({ initialValue: 0 })
+export const timer$ = createObservable({ initialValue: 100 })
 ```
 
-### 2. Creating a Persistent Observable
+```typescript
+// src/store/modules/settings.ts
+import { createPersistentObservable } from '@idiosync/react-observable'
+
+export const settings$ = createPersistentObservable({
+  initialValue: { theme: 'light' },
+  name: 'settings',
+})
+```
+
+### 2. Construct Your Store from Store Modules
+
+Each store module exports its observables, and you import the entire module as an alias when constructing your store.
+
+```typescript
+// src/store/create-observable-store.ts
+import { createStore } from '@idiosync/react-observable'
+import * as timing from './modules/timing'
+import * as settings from './modules/settings'
+// ...import other store modules
+
+export function createObservableStore() {
+  const store = {
+    timing,
+    settings,
+    // ...other store modules
+  }
+
+  // Optionally pass persistentStorage here
+  createStore(store)
+  return store
+}
+```
+
+### 3. Export the Store Type
+
+```typescript
+// src/app-shell.tsx
+export const observableStore = createObservableStore()
+```
+
+### 4. Type Augmentation for Automatic Typing
+
+Create a type augmentation file to merge your store type with the library's Store interface. This enables full type inference everywhere you use the library's hooks or context.
+
+```typescript
+// src/types/augmentations/react-observable.d.ts
+import { observableStore } from '../../app-shell'
+type ObservableStore = typeof observableStore
+
+declare module '@idiosync/react-observable' {
+  export interface Store extends ObservableStore {}
+}
+```
+
+**After this, all hooks and context access will be fully typed, with no manual type wiring needed as observables are added and removed from the store modules.**
+
+### 5. Basic Observable Usage
+
+```typescript
+import { useObservableValue } from '@idiosync/react-observable'
+
+function Counter() {
+  const count = useObservableValue(({ store }) => store.timing.counter$)
+  return <div>Count: {count}</div>
+}
+```
+
+### 6. Creating a Persistent Observable
 
 ```typescript
 import { createPersistentObservable } from '@idiosync/react-observable'
@@ -68,28 +137,16 @@ const settings$ = createPersistentObservable({
 await settings$.rehydrate()
 ```
 
-### 3. Creating an Observable Store
+### 7. React Context Integration
 
-```typescript
-import { createObservableStore } from '@idiosync/react-observable'
-
-const store = createObservableStore({
-  counter: createObservable({ initialValue: 0 }),
-  settings: createPersistentObservable({
-    initialValue: { theme: 'light' },
-    name: 'settings',
-  }),
-})
-```
-
-### 4. React Context Integration
+This should be added at the top level of your application. The store is added automatically, so only a loading element is added if required.
 
 ```typescript
 import { ReactObservableProvider } from '@idiosync/react-observable'
 
 function App() {
   return (
-    <ReactObservableProvider store={store} loading={<LoadingSpinner />}>
+    <ReactObservableProvider loading={<LoadingSpinner />}>
       <YourApp />
     </ReactObservableProvider>
   )
@@ -100,42 +157,60 @@ function App() {
 
 ### useObservableValue
 
-Get the current value of an observable and subscribe reactively.
+Get the current value of an observable and subscribe reactively. Streams can be used here for deriving values, but it is not advisable to use local variables in them, as the value as the time of stream creation will always be used. This hook is purely for values derived from state.
 
 ```typescript
 import { useObservableValue } from '@idiosync/react-observable'
 
 function Counter() {
-  const count = useObservableValue(({ store }) => store.counter)
-  return <div>Count: {count}</div>
+
+  const count = useObservableValue(({ store }) => store.timing.counter$)
+
+  const multipliedCount = useObservableValue(({ store: {
+    timing:{ counter$ },
+    multipliers: { mainMultipiler$ }
+  }}) => counter$.withLatestFrom(mainMultipiler$).stream(([count, multiplier] => count * multiplier)))
+
+  return (
+    <div>
+      <div>Count: {count}</div>
+      <div>Multiplied Count: {multipliedCount}</div>
+    </div>
+  )
 }
 ```
 
 ### useEffectStream
 
-Create a derived value or effectful stream that reacts to a dependency array.
+Create a derived value or effectful stream that reacts to a dependency array. $ is the entry point, so the stream must start there in order for the inputs or dependencies are passed.
 
 ```typescript
 import { useEffectStream } from '@idiosync/react-observable'
 
-function DoubledCounter({ multiplier }) {
-  const doubled = useEffectStream(
-    ({ $, store }) => store.counter.stream(count => count * multiplier),
+function MultipliedCounter({ multiplier }) {
+
+  const multipliedCount = useEffectStream(
+    ({ $, store: {
+      timing: {
+        counter$
+      }
+    } }) => $.withLatestFrom(counter$).stream(([multiplier, count]) => count * multiplier),
     [multiplier]
   )
-  return <div>Doubled: {doubled}</div>
+  return <div>Doubled: {multipliedCount}</div>
 }
 ```
 
 ### useStoreObservable
 
-Access a raw observable from the store (not proxied, not value).
+Access a raw observable from the store.
+!!WARNING: Any streams / subscriptions created from these observables in your compnenets or hooks will not automatically be cleaned up!!
 
 ```typescript
 import { useStoreObservable } from '@idiosync/react-observable'
 
 function RawCounter() {
-  const counter$ = useStoreObservable(({ store }) => store.counter)
+  const counter$ = useStoreObservable(({ store }) => store.timing.counter$)
   // You can now use counter$ directly (subscribe, set, etc.)
 }
 ```
@@ -144,7 +219,7 @@ function RawCounter() {
 
 ### createCommandStream
 
-Create a command stream for side-effectful actions (e.g., API calls, orchestrations).
+Create a command stream for side-effectful actions (e.g., API calls, orchestrations). These are implimented in stand-alone modules, and called from components or other command streams
 
 ```typescript
 import { createCommandStream } from '@idiosync/react-observable'
@@ -152,6 +227,7 @@ import { createCommandStream } from '@idiosync/react-observable'
 const fetchUser = createCommandStream(({ $, store }) =>
   $.streamAsync(async ([userId]) => {
     // ...fetch user logic
+    // Example: store.user.user$.set(fetchedUser)
     return userData
   }),
 )
@@ -174,6 +250,8 @@ import { ReactObservableProvider, ReactObservableContext } from '@idiosync/react
 
 // Access the store directly (advanced)
 const store = useContext(ReactObservableContext)
+// Access observables as store.segment.observable$
+// Example: store.timing.counter$, store.settings.settings$
 ```
 
 ## Error Handling
@@ -181,19 +259,20 @@ const store = useContext(ReactObservableContext)
 Use `.catchError` on observables or streams to handle errors gracefully.
 
 ```typescript
-counter$.catchError((error, currentValue, set) => {
-  // Handle or log error
-  set(0) // fallback
-})
-```
+counter$
+  .stream((counter) => {
+    if (counter < 0) {
+      // this allows for very liberal error throwing
+      // throughout streams
+      throw new Error('counter is less that zero')
+    }
+  })
+  .catchError((error, currentValue, set) => {
+    // with centralised handling, for instance
+    logError(Errors.COUNTER_ERROR, error.message)
 
-## Stream Completion
-
-Signal that a stream has finished using `emitComplete`.
-
-```typescript
-const obs$ = createObservable({ initialValue: 0 })
-obs$.emitComplete()
+    set(0) // fallback
+  })
 ```
 
 ## API Reference
@@ -225,6 +304,93 @@ obs$.emitComplete()
 
 - `ReactObservableProvider`
 - `ReactObservableContext`
+
+## Custom Persistent Storage
+
+By default, persistent observables use a built-in storage mechanism, but you can provide your own async storage implementation (e.g., for React Native, web, or custom backends) by passing it as an option to `createObservableStore`.
+
+### PersistentStorage Type
+
+The library exports a `PersistentStorage` TypeScript interface for your convenience:
+
+```typescript
+import { PersistentStorage } from '@idiosync/react-observable'
+
+const persistentStorage: PersistentStorage = {
+  getItem: async (key) => {
+    /* ... */
+  },
+  setItem: async (key, value) => {
+    /* ... */
+  },
+  removeItem: async (key) => {
+    /* ... */
+  },
+}
+```
+
+### Example: Using React Native AsyncStorage
+
+```typescript
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import {
+  createObservableStore,
+  PersistentStorage,
+} from '@idiosync/react-observable'
+
+const persistentStorage: PersistentStorage = {
+  getItem: (key) => AsyncStorage.getItem(key),
+  setItem: (key, value) => AsyncStorage.setItem(key, value),
+  removeItem: (key) => AsyncStorage.removeItem(key),
+}
+
+const store = createObservableStore(
+  {
+    user: createPersistentObservable({
+      initialValue: null,
+      name: 'user',
+    }),
+    // ...other observables
+  },
+  {
+    persistentStorage,
+  },
+)
+```
+
+### Example: Using LocalStorage (Web)
+
+```typescript
+import {
+  createObservableStore,
+  PersistentStorage,
+} from '@idiosync/react-observable'
+
+const persistentStorage: PersistentStorage = {
+  getItem: async (key) => localStorage.getItem(key),
+  setItem: async (key, value) => localStorage.setItem(key, value),
+  removeItem: async (key) => localStorage.removeItem(key),
+}
+
+const store = createObservableStore(
+  {
+    settings: createPersistentObservable({
+      initialValue: { theme: 'light' },
+      name: 'settings',
+    }),
+    // ...other observables
+  },
+  {
+    persistentStorage,
+  },
+)
+```
+
+### Notes
+
+- You only need to pass `persistentStorage` when creating your store.
+- The storage object must implement `getItem`, `setItem`, and `removeItem`, each returning a Promise (even if using synchronous storage like localStorage).
+- This allows you to use any async storage backend, including custom solutions.
 
 ## License
 
