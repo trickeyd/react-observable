@@ -45,21 +45,21 @@ yarn add @idiosync/react-observable
 
 ### 1. Create Store Modules
 
-Create a module for each part of your store, exporting all the individual observables. It is best to use many observables, rather than to put many properties into each one, as this will result in more targeted updates throughout your app.
+Create a module for each part of your store, exporting all the individual observables. It is best to use many observables, rather than to many properties in any one, as this will result in more targeted updates throughout your app.
 
 ```typescript
 // src/store/modules/timing.ts
 import { createObservable } from '@idiosync/react-observable'
 
-export const counter$ = createObservable({ initialValue: 0 })
-export const timer$ = createObservable({ initialValue: 100 })
+export const counter$ = createObservable<number>({ initialValue: 0 })
+export const timer$ = createObservable<number>({ initialValue: 100 })
 ```
 
 ```typescript
 // src/store/modules/settings.ts
 import { createPersistentObservable } from '@idiosync/react-observable'
 
-export const settings$ = createPersistentObservable({
+export const settings$ = createPersistentObservable<ThemeConfig>({
   initialValue: { theme: 'light' },
   name: 'settings',
 })
