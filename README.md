@@ -98,7 +98,7 @@ Wrap your app with the provider (required for all hooks):
 import { ReactObservableProvider } from '@idiosync/react-observable'
 import { createAppStore } from './store'
 
-const store = createAppStore()
+createAppStore()
 
 function App() {
   return (
