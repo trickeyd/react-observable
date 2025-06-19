@@ -401,24 +401,22 @@ const saveUser = createCommandStream(({ $, store }) =>
 
 ### 4. Use mapEntries for Large Objects
 
-Break down large objects into individual observables for more targeted updates:
+Where possible, break down large objects into individual observables for more targeted updates:
 
 ```typescript
-// ❌ Don't do this - entire component re-renders when any user property changes
+// This is fine, but any hook or stream that stems from it will be re-run if any prop changes
 const user$ = createObservable({
   initialValue: { id: 1, name: 'John', email: 'john@example.com', preferences: { theme: 'light' } }
 })
 
-// ✅ Use mapEntries to create individual observables
+// Better approach: Use mapEntries to create individual observables. This ensures that anything down stream will only trigger based on the specific property.
 const user$ = createObservable({
   initialValue: { id: 1, name: 'John', email: 'john@example.com', preferences: { theme: 'light' } }
 })
 
 // Break down into individual observables
 const { userName$, userEmail$, userPreferences$ } = user$.mapEntries({
-  userName: (user) => user.name,
-  userEmail: (user) => user.email,
-  userPreferences: (user) => user.preferences,
+  keys: ['name', 'email', 'preferences']
 })
 
 // Now only components using userName$ re-render when name changes
