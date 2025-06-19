@@ -89,3 +89,12 @@ export const flush = () => {
     observable.reset()
   })
 }
+
+/** @internal - For testing purposes only */
+export const resetStore = () => {
+  storeIsInitialized = false
+  flushableObservables.length = 0
+  store$.set({})
+  flatStore$.set({})
+  persistentStorage$.set(undefined as any)
+}

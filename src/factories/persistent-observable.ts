@@ -58,7 +58,19 @@ export function createPersistentObservable<T>({
         return -1
       }
 
-      _persistentStorage.setItem(observableName, JSON.stringify(reducedValue))
+      // Try to persist to storage, but don't fail if storage is unavailable
+      if (_persistentStorage) {
+        try {
+          _persistentStorage.setItem(
+            observableName,
+            JSON.stringify(reducedValue),
+          )
+        } catch (error) {
+          // Silently handle storage errors
+          console.warn('Failed to persist value to storage:', error)
+        }
+      }
+
       return isSilent ? base.setSilent(reducedValue) : base.set(reducedValue)
     }
 
@@ -68,30 +80,49 @@ export function createPersistentObservable<T>({
   const rehydrate = (): Promise<void> =>
     new Promise((resolve, reject) => {
       if (!_persistentStorage) {
-        throw new Error(
-          'Trying to rehydrate a persistent observable without a persistent storage.',
+        reject(
+          new Error(
+            'Trying to rehydrate a persistent observable without a persistent storage.',
+          ),
         )
+        return
       }
       const observableName = base.getName()
       if (!observableName || observableName === base.getId()) {
         reject(
           new Error('Persistent observable name is required for rehydration.'),
         )
+        return
       }
-      try {
-        _persistentStorage.getItem(observableName).then((value) => {
+
+      _persistentStorage
+        .getItem(observableName)
+        .then((value) => {
           if (value) {
-            const persisted = JSON.parse(value) as T
-            const data = mergeOnHydration
-              ? mergeOnHydration(base.getInitialValue(), persisted)
-              : persisted
-            base.set(data)
+            try {
+              const persisted = JSON.parse(value) as T
+              const data = mergeOnHydration
+                ? mergeOnHydration(base.getInitialValue(), persisted)
+                : persisted
+              base.set(data)
+            } catch (error) {
+              // If JSON parsing fails, keep the initial value
+              console.warn(
+                'Failed to parse stored value, using initial value:',
+                error,
+              )
+            }
           }
           resolve()
         })
-      } catch (error) {
-        reject(error)
-      }
+        .catch((error) => {
+          // If storage get fails, keep the initial value
+          console.warn(
+            'Failed to get value from storage, using initial value:',
+            error,
+          )
+          resolve()
+        })
     })
 
   const reset = () => set(base.getInitialValue())

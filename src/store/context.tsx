@@ -19,10 +19,21 @@ export function ReactObservableProvider({ children, loading = null }: Props) {
     if (store || isRehydrating.current) return
 
     return store$.subscribeWithValue((incomingStore) => {
+      if (!incomingStore) {
+        throw new Error(
+          'Store is not initialized. Make sure createStore() has been called.',
+        )
+      }
+
       isRehydrating.current = true
       Promise.all(
         Object.values(incomingStore).reduce<Promise<unknown>[]>(
           (acc, segment) => {
+            if (!segment) {
+              throw new Error(
+                'Store segment is null or undefined. This indicates a corrupted store structure.',
+              )
+            }
             return [
               ...acc,
               ...Object.values(segment).map((observable) => {

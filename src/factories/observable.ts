@@ -91,7 +91,7 @@ export const createObservable = <T extends unknown>(
 
       if (
         (equalityFn &&
-          !equalityFn(value as Readonly<T>, reducedValue as Readonly<T>)) ||
+          equalityFn(value as Readonly<T>, reducedValue as Readonly<T>)) ||
         value === reducedValue
       ) {
         return

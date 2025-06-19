@@ -29,6 +29,7 @@ export const useEffectStream = <
     subscriptionsRef.current.push(unsubscribe)
   }, [])
 
+  // Get store proxy - this will throw if no provider is available
   const observableStoreProxy = useStoreProxy(handleSubscription)
 
   if (!ref.current) {
@@ -46,15 +47,18 @@ export const useEffectStream = <
   const [data, setData] = useState(ref.current.get)
 
   useEffect(() => {
-    const sub = ref.current?.subscribe((newData: Readonly<ReturnT>) => {
+    if (!ref.current) return
+
+    const sub = ref.current.subscribe((newData: Readonly<ReturnT>) => {
       setData(newData)
     })
+
     return () => {
       sub?.()
       subscriptionsRef.current.forEach((unsub) => unsub())
       subscriptionsRef.current.length = 0
     }
-  }, [])
+  }, [ref.current])
 
   return data
 }
