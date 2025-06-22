@@ -1,0 +1,29 @@
+# Source files
+src/
+src/**/*.test.ts
+src/**/*.test.tsx
+src/**/*.spec.ts
+src/**/*.spec.tsx
+src/**/jest.setup.ts
+src/**/setup.ts
+src/__tests__/
+**/__tests__/
+
+# Development files
+.git/
+.gitignore
+.prettierrc.js
+jest.config.js
+tsconfig.json
+yarn.lock
+.eslintrc.json
+
+# Build artifacts (keep dist but exclude test files)
+dist/__tests__/
+dist/**/*.test.js
+dist/**/*.test.d.ts
+dist/**/*.spec.js
+dist/**/*.spec.d.ts
+
+# Documentation
+README.md 
