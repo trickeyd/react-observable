@@ -41,19 +41,14 @@ export const isObject = (value: unknown): value is object =>
 export const isPlainObject = (value: unknown): value is object =>
   isObject(value) && value.constructor === Object
 
-export const shallowEqual = (a: unknown, b: unknown): boolean => {
+export const shallowEqualArrays = (a: any[], b: any[]): boolean => {
   if (a === b) return true
-  if (!isObject(a) || !isObject(b)) return false
 
-  const keysA = Object.keys(a)
-  const keysB = Object.keys(b)
+  if (!Array.isArray(a) || !Array.isArray(b)) return false
 
-  if (keysA.length !== keysB.length) return false
+  if (a.length !== b.length) return false
 
-  return keysA.every((key) => {
-    if (!Object.prototype.hasOwnProperty.call(b, key)) return false
-    return (a as any)[key] === (b as any)[key]
-  })
+  return a.every((item, index) => item === b[index])
 }
 
 let uuidCounter = 0
