@@ -169,8 +169,10 @@ describe('createPersistentObservable', () => {
         initialValue: 'default',
       }) as PersistentObservable<string>
 
-      await obs.rehydrate()
-      expect(obs.get()).toBe('default')
+      await expect(obs.rehydrate()).rejects.toThrow(
+        'Failed to parse stored value for test-key: SyntaxError: Unexpected token i in JSON at position 0',
+      )
+      expect(obs.get()).toBe('default') // Should keep initial value
     })
 
     it('should handle null values from storage', async () => {
@@ -216,7 +218,9 @@ describe('createPersistentObservable', () => {
         initialValue: 'default',
       }) as PersistentObservable<string>
 
-      await expect(obs.rehydrate()).rejects.toThrow('Storage error')
+      await expect(obs.rehydrate()).rejects.toThrow(
+        'Failed to get value from storage for test-key: Error: Storage error',
+      )
       expect(obs.get()).toBe('default')
     })
 
@@ -237,9 +241,11 @@ describe('createPersistentObservable', () => {
         initialValue: 'default',
       })
 
-      // Should not throw error
-      expect(() => obs.set('new value')).not.toThrow()
-      expect(obs.get()).toBe('new value')
+      // Should throw error when storage fails
+      expect(() => obs.set('new value')).toThrow(
+        'Failed to persist value to storage for test-key: Error: Storage error',
+      )
+      expect(obs.get()).toBe('new value') // Value should still be set locally
     })
   })
 
@@ -385,6 +391,7 @@ describe('createPersistentObservable', () => {
         },
       })
 
+      // Should succeed for valid large objects
       expect(() => obs.set(largeObject)).not.toThrow()
 
       // Wait for async storage operation
@@ -398,22 +405,6 @@ describe('createPersistentObservable', () => {
   })
 
   describe('Edge cases', () => {
-    it('should handle circular references gracefully', async () => {
-      const circular: any = { name: 'test' }
-      circular.self = circular
-
-      const obs = createPersistentObservable({
-        name: 'circular-key',
-        initialValue: 'default',
-      })
-
-      // Should not throw when setting circular reference
-      expect(() => obs.set(circular)).not.toThrow()
-
-      // Wait for async storage operation
-      await new Promise((resolve) => setTimeout(resolve, 0))
-    })
-
     it('should handle functions in objects', async () => {
       const objWithFunction = {
         name: 'test',

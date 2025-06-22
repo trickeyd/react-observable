@@ -314,11 +314,6 @@ import { createPersistentObservable } from '@idiosync/react-observable'
 export const theme$ = createPersistentObservable<'light' | 'dark'>({
   initialValue: 'light',
   name: 'theme', // Required for persistence
-  onError: (error, context) => {
-    // Handle storage errors
-    console.warn(`Storage ${context} failed:`, error)
-    // Or send to error tracking service
-  },
 })
 
 export const userPreferences$ = createPersistentObservable({
@@ -334,34 +329,7 @@ export const userPreferences$ = createPersistentObservable({
 
 ### Error Handling
 
-Persistent observables support configurable error handling:
-
-```typescript
-const observable = createPersistentObservable({
-  name: 'user-settings',
-  initialValue: {},
-  onError: (error, context) => {
-    switch (context) {
-      case 'persist':
-        // Failed to save to storage
-        console.error('Failed to save settings:', error)
-        break
-      case 'rehydrate':
-        // Failed to load from storage
-        console.error('Failed to load settings:', error)
-        break
-    }
-  },
-})
-```
-
-**Error Contexts:**
-
-- `'persist'` - Error occurred while saving to storage
-- `'rehydrate'` - Error occurred while loading from storage
-
-**Without Error Handler:**
-If no `onError` is provided, critical errors will be thrown, allowing you to handle them at a higher level.
+Storage errors are handled centrally by the library during hydration. If storage is unavailable or corrupted, observables will gracefully fall back to their initial values without throwing errors.
 
 ### Using AsyncStorage (React Native)
 

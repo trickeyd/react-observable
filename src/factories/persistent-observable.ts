@@ -24,7 +24,6 @@ const defaultMergeOnHydration = <T, Persisted = T>(
 interface CreatePersistentObservableParams<T>
   extends CreateObservableParams<T> {
   mergeOnHydration?: (initialValue: T, persisted: unknown) => T
-  onError?: (error: Error, context: 'persist' | 'rehydrate') => void
 }
 
 export function createPersistentObservable<T>({
@@ -32,7 +31,6 @@ export function createPersistentObservable<T>({
   initialValue,
   equalityFn,
   mergeOnHydration = defaultMergeOnHydration,
-  onError,
 }: CreatePersistentObservableParams<T>): Observable<T> {
   let _persistentStorage = persistentStorage$.get()
   if (!_persistentStorage) {
@@ -60,7 +58,11 @@ export function createPersistentObservable<T>({
         return -1
       }
 
-      // Try to persist to storage, but don't fail if storage is unavailable
+      // Set the value locally first
+      const result = isSilent
+        ? base.setSilent(reducedValue)
+        : base.set(reducedValue)
+
       if (_persistentStorage) {
         try {
           _persistentStorage.setItem(
@@ -68,16 +70,13 @@ export function createPersistentObservable<T>({
             JSON.stringify(reducedValue),
           )
         } catch (error) {
-          // Call error handler if provided, otherwise throw for critical errors
-          if (onError) {
-            onError(error as Error, 'persist')
-          } else {
-            throw new Error(`Failed to persist value to storage: ${error}`)
-          }
+          throw new Error(
+            `Failed to persist value to storage for ${observableName}: ${error}`,
+          )
         }
       }
 
-      return isSilent ? base.setSilent(reducedValue) : base.set(reducedValue)
+      return result
     }
 
   const setSilent: ObservableSetter<T> = _setInternal(true)
@@ -112,23 +111,24 @@ export function createPersistentObservable<T>({
                 : persisted
               base.set(data)
             } catch (error) {
-              // If JSON parsing fails, call error handler or keep initial value
-              if (onError) {
-                onError(error as Error, 'rehydrate')
-              }
-              // Keep initial value on parsing error
+              // If JSON parsing fails, reject so library can handle
+              reject(
+                new Error(
+                  `Failed to parse stored value for ${observableName}: ${error}`,
+                ),
+              )
+              return
             }
           }
           resolve()
         })
-        .catch((error) => {
-          // If storage get fails, call error handler or keep initial value
-          if (onError) {
-            onError(error as Error, 'rehydrate')
-          }
-          // Keep initial value on storage error
-          resolve()
-        })
+        .catch((error) =>
+          reject(
+            new Error(
+              `Failed to get value from storage for ${observableName}: ${error instanceof Error ? error.message : error}`,
+            ),
+          ),
+        )
     })
 
   const reset = () => set(base.getInitialValue())
