@@ -64,16 +64,16 @@ export function createPersistentObservable<T>({
         : base.set(reducedValue)
 
       if (_persistentStorage) {
-        try {
-          _persistentStorage.setItem(
-            observableName,
-            JSON.stringify(reducedValue),
-          )
-        } catch (error) {
-          throw new Error(
-            `Failed to persist value to storage for ${observableName}: ${error}`,
-          )
-        }
+        // Handle async setItem without making the setter async
+        _persistentStorage
+          .setItem(observableName, JSON.stringify(reducedValue))
+          .catch((error) => {
+            // Log the error but don't throw since setter is synchronous
+            console.error(
+              `Failed to persist value to storage for ${observableName}:`,
+              error,
+            )
+          })
       }
 
       return result

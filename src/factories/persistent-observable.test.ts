@@ -205,7 +205,7 @@ describe('createPersistentObservable', () => {
       const errorStorage = {
         ...mockStorage,
         getItem: jest.fn(() => {
-          throw new Error('Storage error')
+          return Promise.reject(new Error('Storage error'))
         }),
       }
 
@@ -219,16 +219,18 @@ describe('createPersistentObservable', () => {
       }) as PersistentObservable<string>
 
       await expect(obs.rehydrate()).rejects.toThrow(
-        'Failed to get value from storage for test-key: Error: Storage error',
+        'Failed to get value from storage for test-key: Storage error',
       )
       expect(obs.get()).toBe('default')
     })
 
     it('should handle storage set errors gracefully', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+
       const errorStorage = {
         ...mockStorage,
         setItem: jest.fn(() => {
-          throw new Error('Storage error')
+          return Promise.reject(new Error('Storage error'))
         }),
       }
 
@@ -241,11 +243,19 @@ describe('createPersistentObservable', () => {
         initialValue: 'default',
       })
 
-      // Should throw error when storage fails
-      expect(() => obs.set('new value')).toThrow(
-        'Failed to persist value to storage for test-key: Error: Storage error',
-      )
+      // Should not throw error when storage fails (handled asynchronously)
+      obs.set('new value')
       expect(obs.get()).toBe('new value') // Value should still be set locally
+
+      // Wait for async error handling
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Failed to persist value to storage for test-key:',
+        expect.any(Error),
+      )
+
+      consoleSpy.mockRestore()
     })
   })
 
