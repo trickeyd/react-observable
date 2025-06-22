@@ -36,6 +36,5 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          yarn version:patch
-          yarn git:stage-commit
-          yarn git:push
+          yarn version --patch --yes
+          git push --follow-tags

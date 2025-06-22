@@ -34,12 +34,7 @@
     "clean": "rm -rf dist",
     "build": "yarn clean && tsc",
     "prepare": "yarn build",
-    "version:patch": "yarn version --patch --yes",
-    "git:stage-commit": "git add -A && git commit -m 'chore: bump version'",
-    "git:push": "git push --follow-tags",
-    "publish:patch": "yarn version:patch && yarn build && yarn publish --access public && yarn git:stage-commit && yarn git:push",
-    "publish:minor": "yarn version --minor --yes && yarn build && yarn publish --access public && yarn git:stage-commit && yarn git:push",
-    "publish:major": "yarn version --major --yes && yarn build && yarn publish --access public && yarn git:stage-commit && yarn git:push"
+    "version:patch": "yarn version --patch --yes"
   },
   "files": [
     "dist"
