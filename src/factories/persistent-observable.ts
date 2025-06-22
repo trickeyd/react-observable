@@ -24,6 +24,7 @@ const defaultMergeOnHydration = <T, Persisted = T>(
 interface CreatePersistentObservableParams<T>
   extends CreateObservableParams<T> {
   mergeOnHydration?: (initialValue: T, persisted: unknown) => T
+  onError?: (error: Error, context: 'persist' | 'rehydrate') => void
 }
 
 export function createPersistentObservable<T>({
@@ -31,6 +32,7 @@ export function createPersistentObservable<T>({
   initialValue,
   equalityFn,
   mergeOnHydration = defaultMergeOnHydration,
+  onError,
 }: CreatePersistentObservableParams<T>): Observable<T> {
   let _persistentStorage = persistentStorage$.get()
   if (!_persistentStorage) {
@@ -66,8 +68,12 @@ export function createPersistentObservable<T>({
             JSON.stringify(reducedValue),
           )
         } catch (error) {
-          // Silently handle storage errors
-          console.warn('Failed to persist value to storage:', error)
+          // Call error handler if provided, otherwise throw for critical errors
+          if (onError) {
+            onError(error as Error, 'persist')
+          } else {
+            throw new Error(`Failed to persist value to storage: ${error}`)
+          }
         }
       }
 
@@ -106,21 +112,21 @@ export function createPersistentObservable<T>({
                 : persisted
               base.set(data)
             } catch (error) {
-              // If JSON parsing fails, keep the initial value
-              console.warn(
-                'Failed to parse stored value, using initial value:',
-                error,
-              )
+              // If JSON parsing fails, call error handler or keep initial value
+              if (onError) {
+                onError(error as Error, 'rehydrate')
+              }
+              // Keep initial value on parsing error
             }
           }
           resolve()
         })
         .catch((error) => {
-          // If storage get fails, keep the initial value
-          console.warn(
-            'Failed to get value from storage, using initial value:',
-            error,
-          )
+          // If storage get fails, call error handler or keep initial value
+          if (onError) {
+            onError(error as Error, 'rehydrate')
+          }
+          // Keep initial value on storage error
           resolve()
         })
     })

@@ -18,17 +18,23 @@
       "*": ["node_modules/*"]
     }
   },
-  "include": ["src/**/*", "src/**/*.d.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
   "exclude": [
     "node_modules",
     "dist",
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/**/*.spec.ts",
-    "src/**/*.spec.tsx",
-    "src/**/jest.setup.ts",
-    "src/**/setup.ts",
-    "src/__tests__/**/*",
-    "**/__tests__/**/*"
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/jest.setup.ts",
+    "**/jest.setup.tsx",
+    "**/setup.ts",
+    "**/setup.tsx",
+    "**/__tests__/**/*",
+    "src/**/__tests__/**/*",
+    "**/*.test.js",
+    "**/*.test.jsx",
+    "**/*.spec.js",
+    "**/*.spec.jsx"
   ]
 }

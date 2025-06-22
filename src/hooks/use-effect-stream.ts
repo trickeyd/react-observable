@@ -40,9 +40,7 @@ export const useEffectStream = <
   }
 
   const isEqual = useEqualityChecker(inputs)
-  console.log('isEqual', isEqual)
   if (!isEqual) {
-    console.log('setting inputs', inputs)
     entry$.set(inputs)
   }
 

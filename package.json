@@ -31,7 +31,8 @@
   "scripts": {
     "test": "jest",
     "lint": "eslint src --ext .ts,.tsx",
-    "build": "tsc",
+    "clean": "rm -rf dist",
+    "build": "yarn clean && tsc",
     "prepare": "yarn build",
     "version:patch": "yarn version --patch --yes",
     "git:stage-commit": "git add -A && git commit -m 'chore: bump version'",
