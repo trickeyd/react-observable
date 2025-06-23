@@ -42,7 +42,9 @@
   "author": "James Trickey",
   "license": "MIT",
   "private": false,
-  "dependencies": {},
+  "dependencies": {
+    "@idiosync/react-observable": "^1.1.18"
+  },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.1.0",
     "@testing-library/react": "^14.0.0",

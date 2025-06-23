@@ -334,6 +334,11 @@
   resolved "https://registry.yarnpkg.com/@humanwhocodes/object-schema/-/object-schema-2.0.3.tgz#4a2868d75d6d6963e423bcf90b7fd1be343409d3"
   integrity sha512-93zYdMES/c1D69yZiKDBj0V24vqNzB/koF26KPaagAfd3P/4gUlh3Dys5ogAK+Exi9QyzlD8x/08Zt7wIKcDcA==
 
+"@idiosync/react-observable@^1.1.18":
+  version "1.1.18"
+  resolved "https://registry.yarnpkg.com/@idiosync/react-observable/-/react-observable-1.1.18.tgz#db417e37d079c019d28ecae8d85c9661e0a90122"
+  integrity sha512-OvKBkWWWX1KF9aHnQQprVebXb4nnaN8VBFeTruYaSSJnpeN9euVrsO7fbIBfKR3M5mtphwA2lbeQQpgGnrEB/w==
+
 "@istanbuljs/load-nyc-config@^1.0.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@istanbuljs/load-nyc-config/-/load-nyc-config-1.1.0.tgz#fd3db1d59ecf7cf121e80650bb86712f9b55eced"

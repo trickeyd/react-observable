@@ -4,7 +4,7 @@ import { shallowEqualArrays } from '../utils/general'
 export const useEqualityChecker = <T>(dependencies: T[]): boolean => {
   const ref = useRef<T[]>([])
 
-  const isEqual = shallowEqualArrays(ref.current, dependencies)
+  const isEqual = !!ref.current && shallowEqualArrays(ref.current, dependencies)
 
   ref.current = dependencies
 
