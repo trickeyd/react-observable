@@ -243,9 +243,7 @@ describe('ReactObservableProvider', () => {
       await renderWithProvider(<TestTypeComponent />)
 
       // Wait a bit more for the provider to fully initialize
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 10))
-      })
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(screen.getByTestId('typed')).toHaveTextContent('typed')
     })
