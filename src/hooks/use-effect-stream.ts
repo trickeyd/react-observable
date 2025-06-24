@@ -21,9 +21,7 @@ export const useEffectStream = <
 ): Readonly<ReturnT> => {
   const ref = useRef<Observable<ReturnT> | undefined>(undefined)
   const subscriptionsRef = useRef<(() => void)[]>([])
-  const entry$ = useRef(
-    createObservable<InputT>({ initialValue: inputs }),
-  ).current
+  const entry$ = useRef(createObservable<InputT>()).current
 
   const handleSubscription = useCallback((unsubscribe: () => void) => {
     subscriptionsRef.current.push(unsubscribe)
