@@ -13,6 +13,7 @@
     "isolatedModules": true,
     "jsx": "react",
     "lib": ["es2018", "dom"],
+    "types": ["jest", "@testing-library/jest-dom"],
     "baseUrl": ".",
     "paths": {
       "*": ["node_modules/*"]

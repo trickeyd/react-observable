@@ -47,7 +47,7 @@ export const useEffectStream = <
   const [data, setData] = useState(ref.current.get)
 
   useEffect(() => {
-    if (!ref.current) return
+    if (!ref.current) throw new Error('No observable found')
 
     const sub = ref.current.subscribe((newData: Readonly<ReturnT>) => {
       setData(newData)
@@ -58,7 +58,7 @@ export const useEffectStream = <
       subscriptionsRef.current.forEach((unsub) => unsub())
       subscriptionsRef.current.length = 0
     }
-  }, [ref.current])
+  }, [])
 
   return data
 }

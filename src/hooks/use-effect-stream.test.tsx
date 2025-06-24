@@ -155,6 +155,28 @@ describe('useEffectStream', () => {
         '{"name":"John","age":25,"active":true}',
       )
     })
+
+    it('should call initialise on first mount regardless of deps array', async () => {
+      const mockInitialise = jest.fn(({ $, store }) =>
+        createObservable({ initialValue: 'mount' }),
+      )
+      await renderWithProvider(
+        <TestComponent initialise={mockInitialise} deps={[]} />,
+      )
+      expect(mockInitialise).toHaveBeenCalledTimes(1)
+    })
+
+    it('should set up subscription on first mount and return initial value', async () => {
+      const obs = createObservable({ initialValue: 'initial value' })
+      const subscribeSpy = jest.spyOn(obs, 'subscribe')
+
+      await renderWithProvider(
+        <TestComponent initialise={({ $, store }) => obs} deps={[]} />,
+      )
+
+      expect(subscribeSpy).toHaveBeenCalledTimes(1)
+      expect(screen.getByTestId('value')).toHaveTextContent('"initial value"')
+    })
   })
 
   describe('Dependencies', () => {
@@ -409,6 +431,24 @@ describe('useEffectStream', () => {
       )
 
       expect(screen.getByTestId('value')).toHaveTextContent('"function value"')
+    })
+
+    it('should handle React Strict Mode double mounting', async () => {
+      const obs = createObservable({ initialValue: 'strict mode test' })
+      const subscribeSpy = jest.spyOn(obs, 'subscribe')
+
+      // Properly simulate React Strict Mode by wrapping in StrictMode
+      await renderWithProvider(
+        <React.StrictMode>
+          <TestComponent initialise={({ $, store }) => obs} deps={[]} />
+        </React.StrictMode>,
+      )
+
+      // Should work correctly in Strict Mode
+      expect(screen.getByTestId('value')).toHaveTextContent(
+        '"strict mode test"',
+      )
+      expect(subscribeSpy).toHaveBeenCalled()
     })
   })
 
