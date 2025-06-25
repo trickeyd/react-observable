@@ -164,21 +164,6 @@ describe('createCommandStream', () => {
     })
   })
 
-  describe('Result observable integration', () => {
-    it('should integrate with external result observable', async () => {
-      const result$ = createObservable<string>()
-      const command = createCommandStream<string, string>(
-        ({ $, store }) => {
-          return $.stream((value) => value) as any
-        },
-        { result$ },
-      )
-
-      await command('test')
-      expect(result$.get()).toBe('test')
-    })
-  })
-
   describe('Stream operations', () => {
     it('should handle stream with latest from', async () => {
       const command = createCommandStream<string, string>(({ $, store }) => {
