@@ -5,10 +5,12 @@ import { Readonly } from '../types/access'
 import { Store } from '../types/store'
 import { createObservable } from '../factories/observable'
 import { useStoreProxy } from './use-store-proxy'
+import { InferNullable } from '../types/observable'
 
 export const useEffectStream = <
   ReturnT = any,
   InputT extends unknown[] = unknown[],
+  IsNullable extends boolean = true,
 >(
   initialise: ({
     $,
@@ -16,10 +18,11 @@ export const useEffectStream = <
   }: {
     $: Observable<InputT>
     store: Store
-  }) => Observable<ReturnT>,
+  }) => Observable<InferNullable<ReturnT, IsNullable>>,
   inputs: InputT,
-): Readonly<ReturnT> => {
-  const ref = useRef<Observable<ReturnT> | undefined>(undefined)
+): Readonly<InferNullable<ReturnT, IsNullable>> => {
+  type NullableInferredReturnT = InferNullable<ReturnT, IsNullable>
+  const ref = useRef<Observable<NullableInferredReturnT> | undefined>(undefined)
   const subscriptionsRef = useRef<(() => void)[]>([])
   const entry$ = useRef(createObservable<InputT>()).current
 
@@ -47,9 +50,11 @@ export const useEffectStream = <
   useEffect(() => {
     if (!ref.current) throw new Error('No observable found')
 
-    const sub = ref.current.subscribe((newData: Readonly<ReturnT>) => {
-      setData(newData)
-    })
+    const sub = ref.current.subscribe(
+      (newData: Readonly<NullableInferredReturnT>) => {
+        setData(newData)
+      },
+    )
 
     return () => {
       sub?.()
