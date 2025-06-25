@@ -12,6 +12,7 @@ A lightweight, type-safe, and reactive state management library for React applic
 - **Persistent Storage**: Built-in support for AsyncStorage, localStorage, and custom backends
 - **Error Handling**: Centralized error handling with `.catchError()`
 - **Immutable**: Deep readonly types prevent accidental mutations
+- **Nullable Control**: Fine-grained control over whether observables can contain `undefined` values
 
 ## Why Not Redux? (What This Library Fixes)
 
@@ -43,12 +44,19 @@ Start by creating observables for your application state:
 // src/store/modules/user.ts
 import { createObservable } from '@idiosync/react-observable'
 
-export const user$ = createObservable<User | null>({
-  initialValue: null,
+export const user$ = createObservable<User>({
+  initialValue: undefined,
 })
 
-export const isAuthenticated$ = createObservable<boolean>({
+// the second parameter denotes IsNullable
+// Non-nullable observable - cannot contain undefined and require an initial value
+export const isAuthenticated$ = createObservable<boolean, false>({
   initialValue: false,
+})
+
+// Explicitly nullable observable
+export const userPreferences$ = createObservable<UserPreferences, true>({
+  initialValue: undefined,
 })
 ```
 
@@ -248,6 +256,31 @@ function UserProfile({ userId }: { userId: string }) {
 }
 ```
 
+## Nullable vs Non-Nullable Observables
+
+The `IsNullable` parameter controls whether an observable can contain `undefined` values:
+
+```typescript
+// Nullable observable (default) - can contain undefined
+const nullable$ = createObservable<string>({
+  initialValue: 'hello',
+})
+// Type: Observable<string | undefined>
+
+// Non-nullable observable - cannot contain undefined
+const nonNullable$ = createObservable<string, false>({
+  initialValue: 'hello',
+})
+// Type: Observable<string>
+
+// Explicitly nullable observable
+const explicitNullable$ = createObservable<string, true>()
+// Type: Observable<string | undefined>
+```
+
+- IsNullable defaults to true
+- If IsNullable is false, a initialValue is required
+
 ## Observable Methods
 
 ### Basic Operations
@@ -316,7 +349,11 @@ export const theme$ = createPersistentObservable<'light' | 'dark'>({
   name: 'theme', // Required for persistence
 })
 
-export const userPreferences$ = createPersistentObservable({
+// Nullable persistent observable
+export const userPreferences$ = createPersistentObservable<
+  UserPreferences | undefined,
+  true
+>({
   initialValue: { fontSize: 16, notifications: true },
   name: 'user-preferences',
   // Optional: Custom merge function for hydration
@@ -465,8 +502,8 @@ This approach ensures that only components using specific properties re-render w
 
 ### Core Functions
 
-- `createObservable<T>(config): Observable<T>`
-- `createPersistentObservable<T>(config): PersistentObservable<T>`
+- `createObservable<T, IsNullable = true>(config): Observable<T | undefined>`
+- `createPersistentObservable<T, IsNullable = true>(config): PersistentObservable<T | undefined>`
 - `createStore(store, options?): void`
 - `createCommandStream(initializer): CommandStream`
 
