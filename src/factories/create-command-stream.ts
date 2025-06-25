@@ -28,7 +28,7 @@ export const createCommandStream = <ReturnT, InputT = undefined>(
   { onError, initialValue, result$ }: Props<ReturnT> = {},
 ): {
   (payload?: InputT): Promise<ExecuteReturnType<ReturnT>>
-  exit$: Observable<ReturnT>
+  exit$: Observable<ReturnT | undefined>
 } => {
   const entry$ = createObservable<InputT>({ initialValue: undefined })
   const exit$ = createObservable<ReturnT>({ initialValue })
@@ -86,10 +86,8 @@ export const createCommandStream = <ReturnT, InputT = undefined>(
             }
           },
         )
-        if (payload) {
-          entry$.setSilent(payload)
-        }
-        entry$.emit([
+
+        entry$.set(payload, [
           {
             id: executionId,
             name: `createStream:${executionId}`,

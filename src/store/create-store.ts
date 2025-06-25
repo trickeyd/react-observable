@@ -4,7 +4,9 @@ import { Store } from '../types/store'
 import { PersistentStorage } from '../types/persistence'
 
 /** @internal */
-export const store$ = createObservable<Store>()
+export const store$ = createObservable<Store, false>({
+  initialValue: {},
+})
 
 /** @internal */
 export const flatStore$ = store$.stream((store) =>

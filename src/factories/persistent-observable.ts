@@ -3,6 +3,7 @@ import {
   CreateObservableParams,
   ObservableSetter,
   Observable,
+  InferNullable,
 } from '../types/observable'
 import { isFunction, isPlainObject } from '../utils/general'
 import { Readonly } from '../types/access'
@@ -11,27 +12,40 @@ import { persistentStorage$ } from '../store/create-store'
 
 export const persistentObservables: PersistentObservable<any>[] = []
 
-const defaultMergeOnHydration = <T, Persisted = T>(
-  initialValue: T,
+const defaultMergeOnHydration = <
+  NullableInferredT,
+  Persisted = NullableInferredT,
+>(
+  initialValue: NullableInferredT,
   persisted: Persisted,
-): T => {
+): NullableInferredT => {
   if (!isPlainObject(initialValue)) {
-    return persisted as unknown as T
+    return persisted as unknown as NullableInferredT
   }
-  return { ...initialValue, ...(persisted ?? {}) } as T
+  return { ...initialValue, ...(persisted ?? {}) } as NullableInferredT
 }
 
-interface CreatePersistentObservableParams<T>
-  extends CreateObservableParams<T> {
-  mergeOnHydration?: (initialValue: T, persisted: unknown) => T
+interface CreatePersistentObservableParams<NullableInferredT>
+  extends CreateObservableParams<NullableInferredT> {
+  mergeOnHydration?: (
+    initialValue: NullableInferredT,
+    persisted: unknown,
+  ) => NullableInferredT
 }
 
-export function createPersistentObservable<T>({
+export function createPersistentObservable<
+  T,
+  IsNullable extends boolean = true,
+>({
   name,
   initialValue,
   equalityFn,
   mergeOnHydration = defaultMergeOnHydration,
-}: CreatePersistentObservableParams<T>): Observable<T> {
+}: CreatePersistentObservableParams<InferNullable<T, IsNullable>>): Observable<
+  InferNullable<T, IsNullable>
+> {
+  type NullableInferredT = InferNullable<T, IsNullable>
+
   let _persistentStorage = persistentStorage$.get()
   if (!_persistentStorage) {
     persistentStorage$.subscribeOnce((persistentStorage) => {
@@ -42,7 +56,7 @@ export function createPersistentObservable<T>({
   const base = createObservable({ initialValue, name })
 
   const _setInternal =
-    (isSilent: boolean): ObservableSetter<T> =>
+    (isSilent: boolean): ObservableSetter<NullableInferredT> =>
     (newValue, stack) => {
       const observableName = base.getName()
       if (!observableName || observableName === base.getId()) {
@@ -52,7 +66,8 @@ export function createPersistentObservable<T>({
       const reducedValue = isFunction(newValue) ? newValue(value) : newValue
 
       if (
-        (equalityFn && !equalityFn(value, reducedValue as Readonly<T>)) ||
+        (equalityFn &&
+          !equalityFn(value, reducedValue as Readonly<NullableInferredT>)) ||
         value === reducedValue
       ) {
         return -1
@@ -79,8 +94,8 @@ export function createPersistentObservable<T>({
       return result
     }
 
-  const setSilent: ObservableSetter<T> = _setInternal(true)
-  const set: ObservableSetter<T> = _setInternal(false)
+  const setSilent: ObservableSetter<NullableInferredT> = _setInternal(true)
+  const set: ObservableSetter<NullableInferredT> = _setInternal(false)
 
   const rehydrate = (): Promise<void> =>
     new Promise((resolve, reject) => {
@@ -105,7 +120,7 @@ export function createPersistentObservable<T>({
         .then((value) => {
           if (value) {
             try {
-              const persisted = JSON.parse(value) as T
+              const persisted = JSON.parse(value) as NullableInferredT
               const data = mergeOnHydration
                 ? mergeOnHydration(base.getInitialValue(), persisted)
                 : persisted
@@ -131,7 +146,7 @@ export function createPersistentObservable<T>({
         )
     })
 
-  const reset = () => set(base.getInitialValue())
+  const reset = () => set(base.getInitialValue() as NullableInferredT)
 
   const observable = {
     ...base,
@@ -143,5 +158,5 @@ export function createPersistentObservable<T>({
 
   persistentObservables[persistentObservables.length] = observable
 
-  return observable as Observable<T>
+  return observable as Observable<NullableInferredT>
 }

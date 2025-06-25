@@ -1,5 +1,11 @@
 import { Readonly } from './access'
 
+// Helper type for nullable types
+export type InferNullable<
+  T,
+  IsNullable extends boolean = true,
+> = IsNullable extends true ? T | undefined : T
+
 export interface ObservableStackItem {
   id: string
   name: string
@@ -8,51 +14,67 @@ export interface ObservableStackItem {
 }
 
 /** @internal */
-export type ObservableGetter<T> = () => Readonly<T>
+export type ObservableGetter<NullableInferredT> =
+  () => Readonly<NullableInferredT>
 
 /** @internal */
-export type ObservableSetter<T> = (
-  newValue: T | Readonly<T> | ((currentValue: Readonly<T>) => T | Readonly<T>),
+export type ObservableSetter<NullableInferredT> = (
+  newValue:
+    | NullableInferredT
+    | Readonly<NullableInferredT>
+    | ((
+        currentValue: Readonly<NullableInferredT>,
+      ) => NullableInferredT | Readonly<NullableInferredT>),
   stack?: ObservableStackItem[],
 ) => void
 
 /** @internal */
-export type SubscribeFunction<T> = (
-  listener?: (value: Readonly<T>, stack?: ObservableStackItem[]) => void,
+export type SubscribeFunction<NullableInferredT> = (
+  listener?: (
+    value: Readonly<NullableInferredT>,
+    stack?: ObservableStackItem[],
+  ) => void,
   onError?: (error: Error, stack?: ObservableStackItem[]) => void,
   onComplete?: (stack?: ObservableStackItem[]) => void,
 ) => () => void
 
 /** @internal */
-export interface StreamOption<T = unknown> {
-  initialValue?: T
+export interface StreamOption<NullableInferredT = unknown> {
+  initialValue?: NullableInferredT
   streamedName?: string
   executeOnCreation?: boolean
 }
 
-export type StreamProjection<T, IsAsync extends boolean = false> = <
-  NewT = unknown,
->(
-  project: (data: T) => IsAsync extends true ? Promise<NewT> : NewT,
-  options?: StreamOption<NewT>,
-) => Observable<NewT>
+export type StreamProjection<
+  NullableInferredT,
+  IsAsync extends boolean = false,
+> = <NewT = unknown, ProjectionIsNullable extends boolean = true>(
+  project: (
+    data: NullableInferredT,
+  ) => IsAsync extends true
+    ? Promise<InferNullable<NewT, ProjectionIsNullable>>
+    : InferNullable<NewT, ProjectionIsNullable>,
+  options?: StreamOption<InferNullable<NewT, ProjectionIsNullable>>,
+) => Observable<InferNullable<NewT, ProjectionIsNullable>>
 
 /** @internal */
-export type TapOperator<T> = (
-  callback: (currentValue: Readonly<T>) => void,
-) => Observable<T>
+export type TapOperator<NullableInferredT> = (
+  callback: (currentValue: Readonly<NullableInferredT>) => void,
+) => Observable<NullableInferredT>
 
 /** @internal */
-export type DelayOperator<T> = (milliseconds: number) => Observable<T>
+export type DelayOperator<NullableInferredT> = (
+  milliseconds: number,
+) => Observable<NullableInferredT>
 
 /** @internal */
-export type CatchErrorOperator<T> = (
+export type CatchErrorOperator<NullableInferredT> = (
   onError?: (
     error: Error,
-    currentValue: Readonly<T>,
-    setter: ObservableSetter<T>,
+    currentValue: Readonly<NullableInferredT>,
+    setter: ObservableSetter<NullableInferredT>,
   ) => void,
-) => Observable<T>
+) => Observable<NullableInferredT>
 
 /** @internal */
 export type ResetOperator = () => void
@@ -73,41 +95,43 @@ export type EmitCompleteOperator = (stack?: ObservableStackItem[]) => void
 export type UnsubscribeFunction = (id: string) => void
 
 /** @internal */
-export type MapEntriesReturn<T, P extends string = '$'> = {
-  [K in keyof T as `${string & K}${P}`]: Observable<T[K]>
+export type MapEntriesReturn<NullableInferredT, P extends string = '$'> = {
+  [K in keyof NullableInferredT as `${string & K}${P}`]: Observable<
+    NullableInferredT[K]
+  >
 }
 
 /** @internal */
-export type MapEntriesOperator<T> = <P extends string = '$'>({
+export type MapEntriesOperator<NullableInferredT> = <P extends string = '$'>({
   keys,
   observablePostfix,
 }: {
-  keys?: (keyof T)[]
+  keys?: (keyof NullableInferredT)[]
   observablePostfix?: P
-}) => MapEntriesReturn<T, P>
+}) => MapEntriesReturn<NullableInferredT, P>
 
 /** @internal */
-export type GetInitialValueOperator<T> = () => T
+export type GetInitialValueOperator<NullableInferredT> = () => NullableInferredT
 
-export interface Observable<T> {
-  get: ObservableGetter<T>
-  set: ObservableSetter<T>
-  setSilent: ObservableSetter<T>
+export interface Observable<NullableInferredT> {
+  get: ObservableGetter<NullableInferredT>
+  set: ObservableSetter<NullableInferredT>
+  setSilent: ObservableSetter<NullableInferredT>
   getEmitCount: () => number
-  subscribe: SubscribeFunction<T>
-  subscribeOnce: SubscribeFunction<T>
-  subscribeWithValue: SubscribeFunction<T>
-  stream: StreamProjection<T, false>
-  streamAsync: StreamProjection<T, true>
+  subscribe: SubscribeFunction<NullableInferredT>
+  subscribeOnce: SubscribeFunction<NullableInferredT>
+  subscribeWithValue: SubscribeFunction<NullableInferredT>
+  stream: StreamProjection<NullableInferredT, false>
+  streamAsync: StreamProjection<NullableInferredT, true>
   combineLatestFrom: <U extends unknown[]>(
     ...observables: { [K in keyof U]: Observable<U[K]> }
-  ) => Observable<[T, ...{ [K in keyof U]: U[K] }]>
+  ) => Observable<[NullableInferredT, ...{ [K in keyof U]: U[K] }]>
   withLatestFrom: <OtherT extends unknown[]>(
     ...observables: [...{ [K in keyof OtherT]: Observable<OtherT[K]> }]
-  ) => Observable<[T, ...{ [K in keyof OtherT]: OtherT[K] }]>
-  tap: TapOperator<T>
-  delay: DelayOperator<T>
-  catchError: CatchErrorOperator<T>
+  ) => Observable<[NullableInferredT, ...{ [K in keyof OtherT]: OtherT[K] }]>
+  tap: TapOperator<NullableInferredT>
+  delay: DelayOperator<NullableInferredT>
+  catchError: CatchErrorOperator<NullableInferredT>
   reset: ResetOperator
   getName: () => string
   setName: (name: string) => void
@@ -115,28 +139,38 @@ export interface Observable<T> {
   emit: EmitOperator
   emitError: EmitErrorOperator
   emitComplete: EmitCompleteOperator
-  mapEntries: MapEntriesOperator<T>
-  getInitialValue: GetInitialValueOperator<T>
+  mapEntries: MapEntriesOperator<NullableInferredT>
+  getInitialValue: GetInitialValueOperator<NullableInferredT>
   guard: (
-    predicate: (previousValue: Readonly<T>, nextValue: Readonly<T>) => boolean,
-  ) => Observable<T>
+    predicate: (
+      previousValue: Readonly<NullableInferredT>,
+      nextValue: Readonly<NullableInferredT>,
+    ) => boolean,
+  ) => Observable<NullableInferredT>
 }
 
-export interface CreateObservableParams<T> {
-  initialValue?: T | (() => T)
-  equalityFn?: (a: Readonly<T>, b: Readonly<T>) => boolean
+export interface CreateObservableParams<NullableInferredT> {
+  initialValue: NullableInferredT | (() => NullableInferredT)
+  equalityFn?: (
+    a: Readonly<NullableInferredT>,
+    b: Readonly<NullableInferredT>,
+  ) => boolean
   name?: string
 }
 
 /** @internal */
-export interface ListenerRecord<T> {
-  listener?: (value: Readonly<T>, stack?: ObservableStackItem[]) => void
+export interface ListenerRecord<NullableInferredT> {
+  listener?: (
+    value: Readonly<NullableInferredT>,
+    stack?: ObservableStackItem[],
+  ) => void
   onError?: (error: Error, stack?: ObservableStackItem[]) => void
   onComplete?: (stack?: ObservableStackItem[]) => void
   id: string
   once?: boolean
 }
 
-export interface PersistentObservable<T> extends Observable<T> {
+export interface PersistentObservable<NullableInferredT>
+  extends Observable<NullableInferredT> {
   rehydrate: () => Promise<void>
 }

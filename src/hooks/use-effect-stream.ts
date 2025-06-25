@@ -32,7 +32,7 @@ export const useEffectStream = <
 
   if (!ref.current) {
     ref.current = initialise({
-      $: entry$,
+      $: entry$ as Observable<InputT>,
       store: observableStoreProxy,
     })
   }

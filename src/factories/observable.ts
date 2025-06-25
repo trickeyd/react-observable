@@ -19,19 +19,27 @@ import {
   GetInitialValueOperator,
   ObservableStackItem,
   EmitCompleteOperator,
+  InferNullable,
 } from '../types/observable'
 import { Readonly } from '../types/access'
 
-export const createObservable = <T extends unknown>(
-  { initialValue, equalityFn, name }: CreateObservableParams<T> = {
-    initialValue: undefined,
-  },
-): Observable<T> => {
+export const createObservable = <
+  T extends unknown,
+  IsNullable extends boolean = true,
+>(
+  params?: CreateObservableParams<InferNullable<T, IsNullable>>,
+): Observable<InferNullable<T, IsNullable>> => {
+  type NullableInferredT = InferNullable<T, IsNullable>
+
+  const initialValue = params?.initialValue
+  const equalityFn = params?.equalityFn
+  const name = params?.name
+
   const id = uuid()
 
   let _emitCount = 0
   let _observableName: string = name ?? id
-  let _listenerRecords: ListenerRecord<T>[] = []
+  let _listenerRecords: ListenerRecord<NullableInferredT>[] = []
 
   const createStack = (
     stack?: ObservableStackItem[],
@@ -46,20 +54,26 @@ export const createObservable = <T extends unknown>(
     },
   ]
 
-  const getInitialValue: GetInitialValueOperator<T> = (): T =>
-    isFunction(initialValue) ? initialValue() : (initialValue as T)
+  const getInitialValue: GetInitialValueOperator<
+    NullableInferredT
+  > = (): NullableInferredT =>
+    isFunction(initialValue)
+      ? initialValue()
+      : (initialValue as NullableInferredT)
 
   const getEmitCount = (): number => _emitCount
 
-  let value: T = getInitialValue()
+  let value: NullableInferredT = getInitialValue()
 
-  const get: ObservableGetter<T> = (): Readonly<T> => value as Readonly<T>
+  const get: ObservableGetter<
+    NullableInferredT
+  > = (): Readonly<NullableInferredT> => value as Readonly<NullableInferredT>
 
   const emit: EmitOperator = (stack) => {
     const newStack = createStack(stack)
     const unsubscribeIds = _listenerRecords.reduce<string[]>(
       (acc, { listener, once, id }) => {
-        listener?.(value as Readonly<T>, newStack)
+        listener?.(value as Readonly<NullableInferredT>, newStack)
         return once ? [...acc, id] : acc
       },
       [] as string[],
@@ -83,15 +97,18 @@ export const createObservable = <T extends unknown>(
   }
 
   const _setInternal =
-    (isSilent: boolean): ObservableSetter<T> =>
+    (isSilent: boolean): ObservableSetter<NullableInferredT> =>
     (newValue, stack) => {
-      const reducedValue: T = (
+      const reducedValue: NullableInferredT = (
         isFunction(newValue) ? newValue(get()) : newValue
-      ) as T
+      ) as NullableInferredT
 
       if (
         (equalityFn &&
-          equalityFn(value as Readonly<T>, reducedValue as Readonly<T>)) ||
+          equalityFn(
+            value as Readonly<NullableInferredT>,
+            reducedValue as Readonly<NullableInferredT>,
+          )) ||
         value === reducedValue
       ) {
         return
@@ -103,16 +120,20 @@ export const createObservable = <T extends unknown>(
       }
     }
 
-  const set: ObservableSetter<T> = _setInternal(false)
-  const setSilent: ObservableSetter<T> = _setInternal(true)
+  const set: ObservableSetter<NullableInferredT> = _setInternal(false)
+  const setSilent: ObservableSetter<NullableInferredT> = _setInternal(true)
 
-  const subscribe: SubscribeFunction<T> = (listener, onError, onComplete) => {
+  const subscribe: SubscribeFunction<NullableInferredT> = (
+    listener,
+    onError,
+    onComplete,
+  ) => {
     const id = uuid() as string
     _listenerRecords.push({ listener, onError, id, once: false, onComplete })
     return () => unsubscribe(id)
   }
 
-  const subscribeOnce: SubscribeFunction<T> = (
+  const subscribeOnce: SubscribeFunction<NullableInferredT> = (
     listener,
     onError,
     onComplete,
@@ -122,14 +143,14 @@ export const createObservable = <T extends unknown>(
     return () => unsubscribe(id)
   }
 
-  const subscribeWithValue: SubscribeFunction<T> = (
+  const subscribeWithValue: SubscribeFunction<NullableInferredT> = (
     listener,
     onError,
     onComplete,
   ) => {
     const unsubscribe = subscribe(listener, onError, onComplete)
     if (listener) {
-      listener(value as Readonly<T>)
+      listener(value as Readonly<NullableInferredT>)
     }
     return unsubscribe
   }
@@ -141,7 +162,7 @@ export const createObservable = <T extends unknown>(
   const combineLatestFrom = <U extends unknown[]>(
     ...observables: { [K in keyof U]: Observable<U[K]> }
   ) => {
-    type CombinedValues = [T, ...U]
+    type CombinedValues = [NullableInferredT, ...U]
 
     const { initialValues, subscribeFunctions } = observables.reduce<{
       initialValues: CombinedValues
@@ -158,7 +179,7 @@ export const createObservable = <T extends unknown>(
       },
     )
 
-    const combinationObservable$ = createObservable<CombinedValues>({
+    const combinationObservable$ = createObservable<CombinedValues, false>({
       initialValue: initialValues,
     })
 
@@ -182,9 +203,12 @@ export const createObservable = <T extends unknown>(
   const withLatestFrom = <OtherT extends unknown[]>(
     ...observables: [...{ [K in keyof OtherT]: Observable<OtherT[K]> }]
   ) => {
-    type CombinedValues = [T, ...{ [K in keyof OtherT]: OtherT[K] }]
+    type CombinedValues = [
+      NullableInferredT,
+      ...{ [K in keyof OtherT]: OtherT[K] },
+    ]
 
-    const resultObservable$ = createObservable<CombinedValues>({
+    const resultObservable$ = createObservable<CombinedValues, false>({
       initialValue: [
         get(),
         ...observables.map((obs) => obs.get()),
@@ -192,7 +216,10 @@ export const createObservable = <T extends unknown>(
     })
 
     subscribe(
-      (sourceValue: Readonly<T>, stack?: ObservableStackItem[]) => {
+      (
+        sourceValue: Readonly<NullableInferredT>,
+        stack?: ObservableStackItem[],
+      ) => {
         const combined = [
           sourceValue,
           ...observables.map((obs) => obs.get()),
@@ -205,30 +232,36 @@ export const createObservable = <T extends unknown>(
     return resultObservable$
   }
 
-  const stream: StreamProjection<T, false> = <NewT = unknown>(
-    project: (data: Readonly<T>) => NewT,
+  const stream: StreamProjection<NullableInferredT, false> = <
+    NewT = unknown,
+    ProjectionIsNullable extends boolean = true,
+  >(
+    project: (
+      data: Readonly<NullableInferredT>,
+    ) => InferNullable<NewT, ProjectionIsNullable>,
     {
       initialValue,
       streamedName,
       executeOnCreation = true,
-    } = {} as StreamOption<NewT>,
+    } = {} as StreamOption<InferNullable<NewT, ProjectionIsNullable>>,
   ) => {
+    type NullableInferredNewT = InferNullable<NewT, ProjectionIsNullable>
     const name = streamedName ?? createStreamName(getName())
-    const newObservable$ = createObservable<NewT>({
-      initialValue: (initialValue ?? undefined) as NewT,
+    const newObservable$ = createObservable<NullableInferredNewT, false>({
+      initialValue: (initialValue ?? undefined) as NullableInferredNewT,
       name,
     })
 
     ;(executeOnCreation ? subscribeWithValue : subscribe)(
-      (data: Readonly<T>, stack?: ObservableStackItem[]) => {
-        const [newData, projectError] = tryCatchSync<NewT>(
+      (data: Readonly<NullableInferredT>, stack?: ObservableStackItem[]) => {
+        const [newData, projectError] = tryCatchSync<NullableInferredNewT>(
           () => project(data),
           `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`,
         )
         if (projectError) {
           newObservable$.emitError(projectError as Error, stack)
         } else {
-          newObservable$.set(newData as NewT, stack)
+          newObservable$.set(newData as NullableInferredNewT, stack)
         }
       },
       newObservable$.emitError,
@@ -238,33 +271,39 @@ export const createObservable = <T extends unknown>(
     return newObservable$
   }
 
-  const streamAsync: StreamProjection<T, true> = <NewT>(
-    project: (data: Readonly<T>) => Promise<NewT>,
+  const streamAsync: StreamProjection<NullableInferredT, true> = <
+    NewT,
+    ProjectionIsNullable extends boolean = true,
+  >(
+    project: (
+      data: Readonly<NullableInferredT>,
+    ) => Promise<InferNullable<NewT, ProjectionIsNullable>>,
     {
       initialValue,
       streamedName,
       executeOnCreation = false,
-    }: StreamOption<NewT> = {},
+    }: StreamOption<InferNullable<NewT, ProjectionIsNullable>> = {},
   ) => {
+    type NullableInferredNewT = InferNullable<NewT, ProjectionIsNullable>
     const name = streamedName ?? createStreamName(getName())
 
-    const newObservable$ = createObservable<NewT>({
-      initialValue: (initialValue ?? undefined) as NewT,
+    const newObservable$ = createObservable<NullableInferredNewT, false>({
+      initialValue: (initialValue ?? undefined) as NullableInferredNewT,
       name,
     })
 
     const projectToNewObservable = async (
-      data: Readonly<T>,
+      data: Readonly<NullableInferredT>,
       stack?: ObservableStackItem[],
     ) => {
-      const [newData, error] = await tryCatch<NewT>(
+      const [newData, error] = await tryCatch<NullableInferredNewT>(
         () => project(data),
         `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`,
       )
       if (error) {
         newObservable$.emitError(error, stack)
       } else {
-        newObservable$.set(newData as NewT, stack)
+        newObservable$.set(newData as NullableInferredNewT, stack)
       }
     }
 
@@ -277,23 +316,25 @@ export const createObservable = <T extends unknown>(
     return newObservable$
   }
 
-  const tap: TapOperator<T> = (
-    callback: (currentValue: Readonly<T>) => void,
+  const tap: TapOperator<NullableInferredT> = (
+    callback: (currentValue: Readonly<NullableInferredT>) => void,
   ) => {
-    callback(get() as Readonly<T>)
-    return observable as Observable<T>
+    callback(get() as Readonly<NullableInferredT>)
+    return observable as Observable<NullableInferredT>
   }
 
-  const delay = (milliseconds: number): Observable<T> => {
-    const newObservable$ = createObservable<T>({
-      initialValue: get() as T,
+  const delay = (milliseconds: number): Observable<NullableInferredT> => {
+    // False is used here because the type is already inferred
+    // and adding true would cause the type to be inferred as NullableInferredT | undefined
+    const newObservable$ = createObservable<NullableInferredT, false>({
+      initialValue: get() as NullableInferredT,
       name: `${name}_after-delay-${milliseconds}`,
     })
 
     subscribe(
       async (val, stack) => {
         await new Promise((r) => setTimeout(r, milliseconds))
-        newObservable$.set(val as T, stack)
+        newObservable$.set(val as NullableInferredT, stack)
       },
       newObservable$.emitError,
       newObservable$.emitComplete,
@@ -302,11 +343,13 @@ export const createObservable = <T extends unknown>(
     return newObservable$
   }
 
-  const mapEntries: MapEntriesOperator<T> = <P extends string = '$'>({
+  const mapEntries: MapEntriesOperator<NullableInferredT> = <
+    P extends string = '$',
+  >({
     keys,
     observablePostfix = '$' as P,
   }: {
-    keys?: (keyof T)[]
+    keys?: (keyof NullableInferredT)[]
     observablePostfix?: P
   } = {}) => {
     const currentValue = get()
@@ -318,7 +361,7 @@ export const createObservable = <T extends unknown>(
 
     const entries = Object.entries(currentValue as object)
     const filteredEntries = keys
-      ? entries.filter(([key]) => keys.includes(key as keyof T))
+      ? entries.filter(([key]) => keys.includes(key as keyof NullableInferredT))
       : entries
 
     return filteredEntries.reduce(
@@ -326,12 +369,12 @@ export const createObservable = <T extends unknown>(
         const name = `${key}${observablePostfix}`
         return {
           ...acc,
-          [name]: stream((val) => val[key as keyof T], {
+          [name]: stream((val) => val[key as keyof NullableInferredT], {
             streamedName: name,
           }),
         }
       },
-      {} as MapEntriesReturn<T, P>,
+      {} as MapEntriesReturn<NullableInferredT, P>,
     )
   }
 
@@ -349,11 +392,11 @@ export const createObservable = <T extends unknown>(
   const catchError = (
     onError?: (
       error: Error,
-      currentValue: Readonly<T>,
-      setter: ObservableSetter<T>,
+      currentValue: Readonly<NullableInferredT>,
+      setter: ObservableSetter<NullableInferredT>,
     ) => void,
   ) => {
-    const newObservable$ = createObservable<T>({
+    const newObservable$ = createObservable<NullableInferredT, false>({
       initialValue: get(),
       name: `${name}_catchError`,
     })
@@ -361,7 +404,7 @@ export const createObservable = <T extends unknown>(
     const handleError = (error: Error, stack?: ObservableStackItem[]) => {
       if (onError) {
         try {
-          onError(error, get() as Readonly<T>, set)
+          onError(error, get() as Readonly<NullableInferredT>, set)
           newObservable$.emitComplete(stack)
         } catch (err) {
           newObservable$.emitError(err as Error, stack)
@@ -381,10 +424,17 @@ export const createObservable = <T extends unknown>(
   }
 
   const guard = (
-    predicate: (previousValue: Readonly<T>, nextValue: Readonly<T>) => boolean,
+    predicate: (
+      previousValue: Readonly<NullableInferredT>,
+      nextValue: Readonly<NullableInferredT>,
+    ) => boolean,
   ) => {
     // Create a new observable for the guarded stream
-    const guardedObservable = createObservable<T>({ initialValue: get() })
+    // False is used here because the type is already inferred
+    // and adding true would cause the type to be inferred as NullableInferredT | undefined
+    const guardedObservable = createObservable<NullableInferredT, false>({
+      initialValue: get(),
+    })
 
     // Subscribe to the original observable
     observable.subscribe(
@@ -404,7 +454,7 @@ export const createObservable = <T extends unknown>(
     return guardedObservable
   }
 
-  const reset = () => set(getInitialValue() as T)
+  const reset = () => set(getInitialValue() as NullableInferredT)
 
   const getName = () => _observableName
 
@@ -414,7 +464,7 @@ export const createObservable = <T extends unknown>(
 
   const getId = (): string => id
 
-  const observable: Observable<T> = {
+  const observable: Observable<NullableInferredT> = {
     get,
     set,
     setSilent,
