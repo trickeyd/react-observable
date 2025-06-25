@@ -223,7 +223,7 @@ describe('createCommandStream', () => {
       })
 
       const [data, error] = await command('test')
-      expect(data).toBeUndefined()
+      expect(data).toBe('recovered')
       expect(error).toBeUndefined()
     })
   })
