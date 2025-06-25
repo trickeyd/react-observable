@@ -10,10 +10,9 @@ import { Safe } from '../types/access'
 import { getIsAppropriateStream } from '../utils/stream'
 import { uuid } from '../utils/general'
 
-interface Props<ReturnT> {
+interface Props<NullableInferredReturnT> {
   onError?: (err: Error, stack?: ObservableStackItem[]) => void
-  initialValue?: ReturnT
-  result$?: Observable<ReturnT>
+  initialValue?: NullableInferredReturnT
 }
 
 type ExecuteReturnType<NullableInferredT> =
@@ -32,11 +31,7 @@ export const createCommandStream = <
     $: Observable<InputT>
     store: Store
   }) => Observable<InferNullable<ReturnT, IsNullable>>,
-  {
-    onError,
-    initialValue,
-    result$,
-  }: Props<InferNullable<ReturnT, IsNullable>> = {},
+  { onError, initialValue }: Props<InferNullable<ReturnT, IsNullable>> = {},
 ): {
   (
     payload?: InputT,
@@ -49,11 +44,6 @@ export const createCommandStream = <
     initialValue ? { initialValue } : undefined,
   )
   const isInitialised = createObservable<boolean>({ initialValue: false })
-
-  if (result$) {
-    // we don't really need to pass the error on to the result
-    exit$.subscribe((val) => result$.set(val as NullableInferredReturnT))
-  }
 
   const initialiseStream = (store: Safe<Store>) => {
     const stream$: Observable<NullableInferredReturnT> = initialise({
