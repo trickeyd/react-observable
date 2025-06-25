@@ -1,5 +1,9 @@
 import { createObservable } from './observable'
-import { Observable, ObservableStackItem } from '../types/observable'
+import {
+  InferNullable,
+  Observable,
+  ObservableStackItem,
+} from '../types/observable'
 import { Store } from '../types/store'
 import { store$ } from '../store/create-store'
 import { Safe } from '../types/access'
@@ -12,35 +16,47 @@ interface Props<ReturnT> {
   result$?: Observable<ReturnT>
 }
 
-type ExecuteReturnType<T> =
-  | [T, undefined]
+type ExecuteReturnType<NullableInferredT> =
+  | [NullableInferredT, undefined]
   | [undefined, Error]
-  | [undefined, undefined]
 
-export const createCommandStream = <ReturnT, InputT = undefined>(
+export const createCommandStream = <
+  ReturnT,
+  InputT = undefined,
+  IsNullable extends boolean = true,
+>(
   initialise: ({
     $,
     store,
   }: {
     $: Observable<InputT>
     store: Store
-  }) => Observable<ReturnT>,
-  { onError, initialValue, result$ }: Props<ReturnT> = {},
+  }) => Observable<InferNullable<ReturnT, IsNullable>>,
+  {
+    onError,
+    initialValue,
+    result$,
+  }: Props<InferNullable<ReturnT, IsNullable>> = {},
 ): {
-  (payload?: InputT): Promise<ExecuteReturnType<ReturnT>>
-  exit$: Observable<ReturnT | undefined>
+  (
+    payload?: InputT,
+  ): Promise<ExecuteReturnType<InferNullable<ReturnT, IsNullable>>>
+  exit$: Observable<InferNullable<ReturnT, IsNullable>>
 } => {
+  type NullableInferredReturnT = InferNullable<ReturnT, IsNullable>
   const entry$ = createObservable<InputT>({ initialValue: undefined })
-  const exit$ = createObservable<ReturnT>({ initialValue })
+  const exit$ = createObservable<ReturnT, IsNullable>(
+    initialValue ? { initialValue } : undefined,
+  )
   const isInitialised = createObservable<boolean>({ initialValue: false })
 
   if (result$) {
     // we don't really need to pass the error on to the result
-    exit$.subscribe((val) => result$.set(val as ReturnT))
+    exit$.subscribe((val) => result$.set(val as NullableInferredReturnT))
   }
 
   const initialiseStream = (store: Safe<Store>) => {
-    const stream$: Observable<ReturnT> = initialise({
+    const stream$: Observable<NullableInferredReturnT> = initialise({
       $: entry$ as Observable<InputT>,
       store: store as Store,
     })
@@ -48,7 +64,9 @@ export const createCommandStream = <ReturnT, InputT = undefined>(
     stream$.subscribe(exit$.set, exit$.emitError, exit$.emitComplete)
   }
 
-  const execute = (payload?: InputT): Promise<ExecuteReturnType<ReturnT>> =>
+  const execute = (
+    payload?: InputT,
+  ): Promise<ExecuteReturnType<NullableInferredReturnT>> =>
     new Promise((resolve) => {
       const run = () => {
         const executionId = uuid()
@@ -60,7 +78,7 @@ export const createCommandStream = <ReturnT, InputT = undefined>(
               ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
             if (isAppropriateStream) {
-              resolve([data as ReturnT, undefined])
+              resolve([data as NullableInferredReturnT, undefined])
               unsubscribe()
             }
           },
@@ -81,7 +99,7 @@ export const createCommandStream = <ReturnT, InputT = undefined>(
               ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
             if (isAppropriateStream) {
-              resolve([undefined, undefined])
+              resolve([exit$.get() as NullableInferredReturnT, undefined])
               unsubscribe()
             }
           },
