@@ -334,7 +334,7 @@ describe('Stream utilities', () => {
       const completeHandler = jest.fn()
       wrapped.subscribe(undefined, undefined, completeHandler)
 
-      wrapped.emitComplete()
+      wrapped.emitStreamHalted()
 
       expect(completeHandler).toHaveBeenCalledWith(expect.any(Array))
     })

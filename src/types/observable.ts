@@ -30,12 +30,12 @@ export type ObservableSetter<NullableInferredT> = (
 
 /** @internal */
 export type SubscribeFunction<NullableInferredT> = (
-  listener?: (
+  onEmit?: (
     value: Readonly<NullableInferredT>,
     stack?: ObservableStackItem[],
   ) => void,
   onError?: (error: Error, stack?: ObservableStackItem[]) => void,
-  onComplete?: (stack?: ObservableStackItem[]) => void,
+  onStreamHalted?: (stack?: ObservableStackItem[]) => void,
 ) => () => void
 
 /** @internal */
@@ -89,7 +89,7 @@ export type EmitErrorOperator = (
 ) => void
 
 /** @internal */
-export type EmitCompleteOperator = (stack?: ObservableStackItem[]) => void
+export type EmitStreamHaltedOperator = (stack?: ObservableStackItem[]) => void
 
 /** @internal */
 export type UnsubscribeFunction = (id: string) => void
@@ -138,7 +138,7 @@ export interface Observable<NullableInferredT> {
   getId: () => string
   emit: EmitOperator
   emitError: EmitErrorOperator
-  emitComplete: EmitCompleteOperator
+  emitStreamHalted: EmitStreamHaltedOperator
   mapEntries: MapEntriesOperator<NullableInferredT>
   getInitialValue: GetInitialValueOperator<NullableInferredT>
   guard: (
@@ -155,6 +155,7 @@ export interface CreateObservableParams<NullableInferredT> {
     a: Readonly<NullableInferredT>,
     b: Readonly<NullableInferredT>,
   ) => boolean
+  emitWhenValuesAreEqual?: boolean
   name?: string
 }
 
@@ -165,7 +166,7 @@ export interface ListenerRecord<NullableInferredT> {
     stack?: ObservableStackItem[],
   ) => void
   onError?: (error: Error, stack?: ObservableStackItem[]) => void
-  onComplete?: (stack?: ObservableStackItem[]) => void
+  onStreamHalted?: (stack?: ObservableStackItem[]) => void
   id: string
   once?: boolean
 }

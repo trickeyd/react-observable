@@ -211,7 +211,7 @@ describe('createObservable', () => {
       const completeHandler = jest.fn()
       obs.subscribe(undefined, undefined, completeHandler)
 
-      obs.emitComplete()
+      obs.emitStreamHalted()
       expect(completeHandler).toHaveBeenCalledWith(expect.any(Array))
     })
   })
@@ -393,6 +393,74 @@ describe('createObservable', () => {
       obs.setSilent('silent')
       expect(obs.get()).toBe('silent')
       expect(listener).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('emitWhenValuesAreEqual option', () => {
+    it('should emit when value is the same if emitWhenValuesAreEqual is true', () => {
+      const obs = createObservable({
+        initialValue: 'test',
+        emitWhenValuesAreEqual: true,
+      })
+      const listener = jest.fn()
+      obs.subscribe(listener)
+
+      obs.set('test') // Same value
+      expect(listener).toHaveBeenCalledWith('test', expect.any(Array))
+    })
+
+    it('should not emit when value is the same if emitWhenValuesAreEqual is false', () => {
+      const obs = createObservable({
+        initialValue: 'test',
+        emitWhenValuesAreEqual: false,
+      })
+      const listener = jest.fn()
+      obs.subscribe(listener)
+
+      obs.set('test') // Same value
+      expect(listener).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('onStreamHalted callback', () => {
+    it('should call onStreamHalted when value is the same and emitWhenValuesAreEqual is false', () => {
+      const obs = createObservable({
+        initialValue: 'test',
+        emitWhenValuesAreEqual: false,
+      })
+      const onStreamHalted = jest.fn()
+      obs.subscribe(undefined, undefined, onStreamHalted)
+
+      obs.set('test') // Same value
+      expect(onStreamHalted).toHaveBeenCalledWith(expect.any(Array))
+    })
+
+    it('should call onStreamHalted when equalityFn returns true', () => {
+      const obs = createObservable({
+        initialValue: { id: 1, name: 'test' },
+        equalityFn: (a, b) => a.id === b.id,
+      })
+      const onStreamHalted = jest.fn()
+      obs.subscribe(undefined, undefined, onStreamHalted)
+
+      // Setting same ID but different name - equalityFn returns true, so should halt
+      obs.set({ id: 1, name: 'different' })
+      expect(onStreamHalted).toHaveBeenCalledWith(expect.any(Array))
+    })
+  })
+
+  describe('onStreamHalted downstream propagation', () => {
+    it('should call onStreamHalted on downstream observable when upstream emits equal value and emitWhenValuesAreEqual is false', () => {
+      const upstream = createObservable({
+        initialValue: 42,
+        emitWhenValuesAreEqual: false,
+      })
+      const downstream = upstream.stream((v) => v * 2)
+      const onStreamHalted = jest.fn()
+      downstream.subscribe(undefined, undefined, onStreamHalted)
+
+      upstream.set(42) // Same value, should halt downstream
+      expect(onStreamHalted).toHaveBeenCalledWith(expect.any(Array))
     })
   })
 })

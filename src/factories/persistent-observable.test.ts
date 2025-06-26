@@ -314,7 +314,7 @@ describe('createPersistentObservable', () => {
       const completeHandler = jest.fn()
       obs.subscribe(undefined, undefined, completeHandler)
 
-      obs.emitComplete()
+      obs.emitStreamHalted()
       expect(completeHandler).toHaveBeenCalledWith(expect.any(Array))
     })
   })

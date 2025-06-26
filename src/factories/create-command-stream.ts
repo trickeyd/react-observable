@@ -51,7 +51,7 @@ export const createCommandStream = <
       store: store as Store,
     })
     isInitialised.set(true)
-    stream$.subscribe(exit$.set, exit$.emitError, exit$.emitComplete)
+    stream$.subscribe(exit$.set, exit$.emitError, exit$.emitStreamHalted)
   }
 
   const execute = (

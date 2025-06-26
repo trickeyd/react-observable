@@ -18,7 +18,7 @@ import {
   MapEntriesOperator,
   GetInitialValueOperator,
   ObservableStackItem,
-  EmitCompleteOperator,
+  EmitStreamHaltedOperator,
   InferNullable,
 } from '../types/observable'
 import { Readonly } from '../types/access'
@@ -34,6 +34,7 @@ export const createObservable = <
   const initialValue = params?.initialValue
   const equalityFn = params?.equalityFn
   const name = params?.name
+  const emitWhenValuesAreEqual = params?.emitWhenValuesAreEqual ?? false
 
   const id = uuid()
 
@@ -87,13 +88,13 @@ export const createObservable = <
   }
 
   /**
-   * emitComplete notifies all subscribers that the stream has completed successfully.
-   * After calling emitComplete, no further values or errors will be emitted.
-   * Subscribers can provide an onComplete callback to react to stream completion.
+   * emitStreamHalted notifies all subscribers that the stream has been halted.
+   * After calling emitStreamHalted, no further values or errors will be emitted.
+   * Subscribers can provide an onStreamHalted callback to react to stream halting.
    */
-  const emitComplete: EmitCompleteOperator = (stack) => {
+  const emitStreamHalted: EmitStreamHaltedOperator = (stack) => {
     const newStack = createStack(stack)
-    _listenerRecords.forEach(({ onComplete }) => onComplete?.(newStack))
+    _listenerRecords.forEach(({ onStreamHalted }) => onStreamHalted?.(newStack))
   }
 
   const _setInternal =
@@ -109,8 +110,9 @@ export const createObservable = <
             value as Readonly<NullableInferredT>,
             reducedValue as Readonly<NullableInferredT>,
           )) ||
-        value === reducedValue
+        (!emitWhenValuesAreEqual && value === reducedValue)
       ) {
+        emitStreamHalted(stack)
         return
       }
 
@@ -126,29 +128,35 @@ export const createObservable = <
   const subscribe: SubscribeFunction<NullableInferredT> = (
     listener,
     onError,
-    onComplete,
+    onStreamHalted,
   ) => {
     const id = uuid() as string
-    _listenerRecords.push({ listener, onError, id, once: false, onComplete })
+    _listenerRecords.push({
+      listener,
+      onError,
+      id,
+      once: false,
+      onStreamHalted,
+    })
     return () => unsubscribe(id)
   }
 
   const subscribeOnce: SubscribeFunction<NullableInferredT> = (
     listener,
     onError,
-    onComplete,
+    onStreamHalted,
   ) => {
     const id = uuid() as string
-    _listenerRecords.push({ listener, onError, id, once: true, onComplete })
+    _listenerRecords.push({ listener, onError, id, once: true, onStreamHalted })
     return () => unsubscribe(id)
   }
 
   const subscribeWithValue: SubscribeFunction<NullableInferredT> = (
     listener,
     onError,
-    onComplete,
+    onStreamHalted,
   ) => {
-    const unsubscribe = subscribe(listener, onError, onComplete)
+    const unsubscribe = subscribe(listener, onError, onStreamHalted)
     if (listener) {
       listener(value as Readonly<NullableInferredT>)
     }
@@ -181,6 +189,7 @@ export const createObservable = <
 
     const combinationObservable$ = createObservable<CombinedValues, false>({
       initialValue: initialValues,
+      emitWhenValuesAreEqual,
     })
 
     subscribeFunctions.forEach((sub, i) => {
@@ -193,7 +202,7 @@ export const createObservable = <
           }, stack)
         },
         (err: Error) => combinationObservable$.emitError(err),
-        combinationObservable$.emitComplete,
+        combinationObservable$.emitStreamHalted,
       )
     })
 
@@ -213,6 +222,7 @@ export const createObservable = <
         get(),
         ...observables.map((obs) => obs.get()),
       ] as CombinedValues,
+      emitWhenValuesAreEqual,
     })
 
     subscribe(
@@ -227,7 +237,7 @@ export const createObservable = <
         resultObservable$.set(combined, stack)
       },
       resultObservable$.emitError,
-      resultObservable$.emitComplete,
+      resultObservable$.emitStreamHalted,
     )
     return resultObservable$
   }
@@ -250,6 +260,7 @@ export const createObservable = <
     const newObservable$ = createObservable<NullableInferredNewT, false>({
       initialValue: (initialValue ?? undefined) as NullableInferredNewT,
       name,
+      emitWhenValuesAreEqual,
     })
 
     ;(executeOnCreation ? subscribeWithValue : subscribe)(
@@ -265,7 +276,7 @@ export const createObservable = <
         }
       },
       newObservable$.emitError,
-      newObservable$.emitComplete,
+      newObservable$.emitStreamHalted,
     )
 
     return newObservable$
@@ -290,6 +301,7 @@ export const createObservable = <
     const newObservable$ = createObservable<NullableInferredNewT, false>({
       initialValue: (initialValue ?? undefined) as NullableInferredNewT,
       name,
+      emitWhenValuesAreEqual,
     })
 
     const projectToNewObservable = async (
@@ -310,7 +322,7 @@ export const createObservable = <
     ;(executeOnCreation ? subscribeWithValue : subscribe)(
       projectToNewObservable,
       newObservable$.emitError,
-      newObservable$.emitComplete,
+      newObservable$.emitStreamHalted,
     )
 
     return newObservable$
@@ -329,6 +341,7 @@ export const createObservable = <
     const newObservable$ = createObservable<NullableInferredT, false>({
       initialValue: get() as NullableInferredT,
       name: `${name}_after-delay-${milliseconds}`,
+      emitWhenValuesAreEqual,
     })
 
     subscribe(
@@ -337,7 +350,7 @@ export const createObservable = <
         newObservable$.set(val as NullableInferredT, stack)
       },
       newObservable$.emitError,
-      newObservable$.emitComplete,
+      newObservable$.emitStreamHalted,
     )
 
     return newObservable$
@@ -384,10 +397,10 @@ export const createObservable = <
    * - The user-provided onError handler can choose to:
    *   - Throw a new error (for better debugging or to mark a problem section)
    *   - Forward the original error
-   *   - Do nothing, in which case the stream will complete gracefully via emitComplete
+   *   - Do nothing, in which case the stream will halt gracefully via emitStreamHalted
    * - If the user handler throws, that error is emitted downstream.
    *
-   * This design allows liberal use of throws throughout the stream, and helps pinpoint problem sections by allowing custom errors to be thrown at any catchError boundary. If the handler does nothing, the stream completes (no longer emits a special error).
+   * This design allows liberal use of throws throughout the stream, and helps pinpoint problem sections by allowing custom errors to be thrown at any catchError boundary. If the handler does nothing, the stream halts (no longer emits a special error).
    */
   const catchError = (
     onError?: (
@@ -399,25 +412,26 @@ export const createObservable = <
     const newObservable$ = createObservable<NullableInferredT, false>({
       initialValue: get(),
       name: `${name}_catchError`,
+      emitWhenValuesAreEqual,
     })
 
     const handleError = (error: Error, stack?: ObservableStackItem[]) => {
       if (onError) {
         try {
           onError(error, get() as Readonly<NullableInferredT>, set)
-          newObservable$.emitComplete(stack)
+          newObservable$.emitStreamHalted(stack)
         } catch (err) {
           newObservable$.emitError(err as Error, stack)
         }
       } else {
-        newObservable$.emitComplete(stack)
+        newObservable$.emitStreamHalted(stack)
       }
     }
 
     subscribe(
       (val, stack) => newObservable$.set(val, stack),
       handleError,
-      newObservable$.emitComplete,
+      newObservable$.emitStreamHalted,
     )
 
     return newObservable$
@@ -434,6 +448,7 @@ export const createObservable = <
     // and adding true would cause the type to be inferred as NullableInferredT | undefined
     const guardedObservable = createObservable<NullableInferredT, false>({
       initialValue: get(),
+      emitWhenValuesAreEqual,
     })
 
     // Subscribe to the original observable
@@ -444,11 +459,11 @@ export const createObservable = <
           guardedObservable.set(nextValue, stack)
         } else {
           // The value is not passed through, but an error must be
-          guardedObservable.emitComplete()
+          guardedObservable.emitStreamHalted()
         }
       },
       guardedObservable.emitError,
-      guardedObservable.emitComplete,
+      guardedObservable.emitStreamHalted,
     )
 
     return guardedObservable
@@ -486,7 +501,7 @@ export const createObservable = <
     getId,
     emit,
     emitError,
-    emitComplete,
+    emitStreamHalted,
     mapEntries,
     getInitialValue,
     guard,

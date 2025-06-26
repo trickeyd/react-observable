@@ -2,18 +2,6 @@
 
 A lightweight, type-safe, and reactive state management library for React applications. Designed for composability, streams, and ergonomic integration with React hooks and context.
 
-## Features
-
-- **Simple & Intuitive**: Create observables and use them directly with React hooks
-- **Type-Safe**: Full TypeScript support with automatic type inference
-- **Reactive**: Components automatically update when observables change
-- **Stream-Based**: Powerful stream operators for derived state and async operations
-- **Context Integration**: Global store management with React context
-- **Persistent Storage**: Built-in support for AsyncStorage, localStorage, and custom backends
-- **Error Handling**: Centralized error handling with `.catchError()`
-- **Immutable**: Deep readonly types prevent accidental mutations
-- **Nullable Control**: Fine-grained control over whether observables can contain `undefined` values
-
 ## Why Not Redux? (What This Library Fixes)
 
 While Redux is powerful, it comes with pain points that `@idiosync/react-observable` solves:
@@ -25,8 +13,14 @@ While Redux is powerful, it comes with pain points that `@idiosync/react-observa
 - **Type Safety**: Automatic inference with deep readonly types
 - **Better Side Effects**: First-class command streams for side effects
 - **Built-in Persistence**: No extra libraries needed for persistent state
+- **Stream-Based Architecture**: Powerful stream operators for derived state and async operations
+- **Context Integration**: Global store management with React context
+- **Immutable**: Deep readonly types prevent accidental mutations
+- **Nullable Control**: Fine-grained control over whether observables can contain `undefined` values
 
-## Installation
+## Quick Start
+
+### 1. Install
 
 ```bash
 npm install @idiosync/react-observable
@@ -34,9 +28,7 @@ npm install @idiosync/react-observable
 yarn add @idiosync/react-observable
 ```
 
-## Quick Start
-
-### 1. Create Your Store
+### 2. Create Your Store
 
 Start by creating observables for your application state:
 
@@ -48,15 +40,9 @@ export const user$ = createObservable<User>({
   initialValue: undefined,
 })
 
-// the second parameter denotes IsNullable
 // Non-nullable observable - cannot contain undefined and require an initial value
 export const isAuthenticated$ = createObservable<boolean, false>({
   initialValue: false,
-})
-
-// Explicitly nullable observable
-export const userPreferences$ = createObservable<UserPreferences, true>({
-  initialValue: undefined,
 })
 ```
 
@@ -66,17 +52,10 @@ import { createPersistentObservable } from '@idiosync/react-observable'
 
 export const theme$ = createPersistentObservable<'light' | 'dark'>({
   initialValue: 'light',
-  // The name will be used for the async key, but if not supplied,
-  // it will default to the observable's name when the store is created
-  name: 'theme',
-})
-
-export const fontSize$ = createPersistentObservable<number>({
-  initialValue: 16,
 })
 ```
 
-### 2. Create Your Store
+### 3. Create Your Store
 
 Combine your modules into a store:
 
@@ -97,7 +76,40 @@ export function createAppStore() {
 }
 ```
 
-### 3. Set Up the Provider
+### 3. Type Augmentation (Required for Full Type Inference)
+
+For the library to work properly with full type inference, create a type augmentation file:
+
+```typescript
+// src/types/react-observable.d.ts
+import { createAppStore } from '../store'
+
+type AppStore = ReturnType<typeof createAppStore>
+
+declare module '@idiosync/react-observable' {
+  export interface Store extends AppStore {}
+}
+```
+
+**Important:** The file must have `.d.ts` extension and be included in your `tsconfig.json`:
+
+```json
+{
+  "include": ["src/**/*", "src/types/react-observable.d.ts"]
+}
+```
+
+You must also import this file in your project's main index file (e.g., `src/index.ts` or `src/App.tsx`):
+
+```typescript
+// src/index.ts
+import './types/react-observable.d.ts'
+// ... rest of your imports
+```
+
+This is a little complex, but you only have to do it once.
+
+### 4. Set Up the Provider
 
 Wrap your app with the provider (required for all hooks):
 
@@ -114,21 +126,6 @@ function App() {
       <YourApp />
     </ReactObservableProvider>
   )
-}
-```
-
-### 4. Type Augmentation (Optional but Recommended)
-
-For full type inference, create a type augmentation file:
-
-```typescript
-// src/types/react-observable.d.ts
-import { createAppStore } from '../store'
-
-type AppStore = ReturnType<typeof createAppStore>
-
-declare module '@idiosync/react-observable' {
-  export interface Store extends AppStore {}
 }
 ```
 
@@ -197,7 +194,7 @@ This library uses **input arrays** rather than React's dependency arrays:
 
 When `multiplier` changes, it flows: `[multiplier]` → `$` → `[[multiplier], count]` → destructured as `[[mult], count]`
 
-Unlike a useEffect, access to the componenet scope will not update, so you should never access component level variables directly.
+Unlike a useEffect, access to the component scope will not update, so you should never access component level variables directly.
 
 ### useStoreObservable
 
@@ -256,31 +253,6 @@ function UserProfile({ userId }: { userId: string }) {
 }
 ```
 
-## Nullable vs Non-Nullable Observables
-
-The `IsNullable` parameter controls whether an observable can contain `undefined` values:
-
-```typescript
-// Nullable observable (default) - can contain undefined
-const nullable$ = createObservable<string>({
-  initialValue: 'hello',
-})
-// Type: Observable<string | undefined>
-
-// Non-nullable observable - cannot contain undefined
-const nonNullable$ = createObservable<string, false>({
-  initialValue: 'hello',
-})
-// Type: Observable<string>
-
-// Explicitly nullable observable
-const explicitNullable$ = createObservable<string, true>()
-// Type: Observable<string | undefined>
-```
-
-- IsNullable defaults to true
-- If IsNullable is false, a initialValue is required
-
 ## Observable Methods
 
 ### Basic Operations
@@ -334,6 +306,73 @@ counter$
     set(0) // Fallback value
   })
 ```
+
+### Stream Halting
+
+Observables can be halted to signal that a stream should stop emitting values. This is different from RxJS completion semantics:
+
+```typescript
+const counter$ = createObservable({ initialValue: 0 })
+
+// Subscribe with stream halted callback
+counter$.subscribe(
+  (value) => console.log('Value:', value),
+  (error) => console.error('Error:', error),
+  (stack) => console.log('Stream halted:', stack),
+)
+
+// Halt the stream
+counter$.emitStreamHalted()
+
+// After halting, no further values or errors will be emitted
+counter$.set(5) // This won't trigger the listener
+```
+
+The `emitStreamHalted` method replaces the previous `emitComplete` method to avoid confusion with RxJS semantics. Stream halting is useful for:
+
+- Signaling that a data source has finished
+- Cleaning up resources
+- Preventing further emissions in error recovery scenarios
+
+### Observable Configuration
+
+Observables support several configuration options:
+
+```typescript
+const counter$ = createObservable({
+  initialValue: 0,
+  name: 'counter', // Optional name for debugging
+  equalityFn: (a, b) => a === b, // Custom equality function
+  emitWhenValuesAreEqual: false, // Whether to emit when values are equal (default: false)
+})
+```
+
+The `emitWhenValuesAreEqual` option controls whether the observable emits when the new value equals the current value. This option is inherited by downstream observables and defaults to `false` to prevent unnecessary re-renders.
+
+## Nullable vs Non-Nullable Observables
+
+The `IsNullable` parameter controls whether an observable can contain `undefined` values:
+
+```typescript
+// Nullable observable (default) - can contain undefined
+const nullable$ = createObservable<string>({
+  initialValue: 'hello',
+})
+// Type: Observable<string | undefined>
+
+// Non-nullable observable - cannot contain undefined
+const nonNullable$ = createObservable<string, false>({
+  initialValue: 'hello',
+})
+// Type: Observable<string>
+
+// Explicitly nullable observable
+const explicitNullable$ = createObservable<string, true>()
+// Type: Observable<string | undefined>
+```
+
+- IsNullable defaults to true
+- If IsNullable is false, a initialValue is required
 
 ## Persistent Storage
 
@@ -512,24 +551,3 @@ This approach ensures that only components using specific properties re-render w
 - `useObservableValue(initializer): T`
 - `useEffectStream(initializer, dependencies): T`
 - `useStoreObservable(initializer): Observable<T>`
-
-### Context
-
-- `ReactObservableProvider`
-- `ReactObservableContext`
-
-### Observable Methods
-
-- `.get(): T`
-- `.set(value | updater): void`
-- `.subscribe(listener): () => void`
-- `.stream(project): Observable<T>`
-- `.streamAsync(asyncProject): Observable<T>`
-- `.withLatestFrom(...observables): Observable<T>`
-- `.combineLatestFrom(...observables): Observable<T[]>`
-- `.catchError(handler): Observable<T>`
-- `.reset(): void`
-
-## License
-
-MIT
