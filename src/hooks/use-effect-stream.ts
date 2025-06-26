@@ -54,6 +54,12 @@ export const useEffectStream = <
       (newData: Readonly<NullableInferredReturnT>) => {
         setData(newData)
       },
+      (error) => {
+        console.error('Error in useEffectStream', error)
+      },
+      (stack) => {
+        console.log('Stream halted', stack)
+      },
     )
 
     return () => {
