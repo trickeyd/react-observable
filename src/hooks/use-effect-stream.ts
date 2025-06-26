@@ -24,7 +24,12 @@ export const useEffectStream = <
   type NullableInferredReturnT = InferNullable<ReturnT, IsNullable>
   const ref = useRef<Observable<NullableInferredReturnT> | undefined>(undefined)
   const subscriptionsRef = useRef<(() => void)[]>([])
-  const entry$ = useRef(createObservable<InputT>()).current
+  const entry$ = useRef(
+    createObservable<InputT, true>({
+      emitWhenValuesAreEqual: true,
+      initialValue: inputs,
+    }),
+  ).current
 
   const handleSubscription = useCallback((unsubscribe: () => void) => {
     subscriptionsRef.current.push(unsubscribe)

@@ -39,7 +39,10 @@ export const createCommandStream = <
   exit$: Observable<InferNullable<ReturnT, IsNullable>>
 } => {
   type NullableInferredReturnT = InferNullable<ReturnT, IsNullable>
-  const entry$ = createObservable<InputT>({ initialValue: undefined })
+  const entry$ = createObservable<InputT>({
+    initialValue: undefined,
+    emitWhenValuesAreEqual: true,
+  })
   const exit$ = createObservable<ReturnT, IsNullable>(
     initialValue ? { initialValue } : undefined,
   )
