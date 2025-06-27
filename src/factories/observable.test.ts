@@ -350,7 +350,7 @@ describe('createObservable', () => {
 
     it('should handle guard operator', () => {
       const obs = createObservable({ initialValue: 5 })
-      const guarded = obs.guard((prev, next) => next > prev)
+      const guarded = obs.guard((next, prev) => next > prev)
       const listener = jest.fn()
       guarded.subscribe(listener)
 
@@ -513,6 +513,66 @@ describe('createObservable', () => {
 
       upstream.set(42) // Same value, should halt downstream
       expect(onStreamHalted).toHaveBeenCalledWith(expect.any(Array))
+    })
+  })
+
+  describe('finally operator', () => {
+    it('should call finally callback on value emission', () => {
+      const obs = createObservable({ initialValue: 1 })
+      const callback = jest.fn()
+      const final$ = obs.finally(callback)
+
+      obs.set(2)
+      expect(callback).toHaveBeenCalledWith(
+        'onValue',
+        2,
+        undefined,
+        expect.any(Array),
+      )
+    })
+
+    it('should call finally callback on error', () => {
+      const obs = createObservable({ initialValue: 1 })
+      const callback = jest.fn()
+      const final$ = obs.finally(callback)
+      const error = new Error('fail')
+
+      obs.emitError(error)
+      expect(callback).toHaveBeenCalledWith(
+        'onError',
+        undefined,
+        error,
+        expect.any(Array),
+      )
+    })
+
+    it('should call finally callback on stream halt', () => {
+      const obs = createObservable({ initialValue: 1 })
+      const callback = jest.fn()
+      const final$ = obs.finally(callback)
+
+      obs.emitStreamHalted()
+      expect(callback).toHaveBeenCalledWith(
+        'onComplete',
+        undefined,
+        undefined,
+        expect.any(Array),
+      )
+    })
+
+    it('should allow chaining after finally', () => {
+      const obs = createObservable({ initialValue: 1 })
+      const callback = jest.fn()
+      const chained$ = obs.finally(callback).stream((x) => x * 2)
+
+      obs.set(3)
+      expect(chained$.get()).toBe(6)
+      expect(callback).toHaveBeenCalledWith(
+        'onValue',
+        3,
+        undefined,
+        expect.any(Array),
+      )
     })
   })
 })
