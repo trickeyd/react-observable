@@ -459,10 +459,51 @@ export const createObservable = <
     return newObservable$
   }
 
+  /**
+   * finally (name when exported) allows you to execute a callback for all subscription events:
+   * - onValue: when a new value is emitted
+   * - onError: when an error occurs
+   * - onComplete: when the stream is halted
+   *
+   * This is useful for cleanup operations, logging, or any side effects
+   * that need to happen regardless of the subscription outcome.
+   */
+  const final = (
+    callback: (
+      type: 'onValue' | 'onError' | 'onComplete',
+      value?: Readonly<NullableInferredT>,
+      error?: Error,
+      stack?: ObservableStackItem[],
+    ) => void,
+  ) => {
+    const newObservable$ = createObservable<NullableInferredT, false>({
+      initialValue: get(),
+      name: `${name}_finally`,
+      emitWhenValuesAreEqual,
+    })
+
+    subscribe(
+      (val, stack) => {
+        callback('onValue', val, undefined, stack)
+        newObservable$.set(val, stack)
+      },
+      (error, stack) => {
+        callback('onError', undefined, error, stack)
+        newObservable$.emitError(error, stack)
+      },
+      (stack) => {
+        callback('onComplete', undefined, undefined, stack)
+        newObservable$.emitStreamHalted(stack)
+      },
+    )
+
+    return newObservable$
+  }
+
   const guard = (
     predicate: (
-      previousValue: Readonly<NullableInferredT>,
       nextValue: Readonly<NullableInferredT>,
+      previousValue: Readonly<NullableInferredT>,
     ) => boolean,
   ) => {
     // Create a new observable for the guarded stream
@@ -477,7 +518,7 @@ export const createObservable = <
     observable.subscribe(
       (nextValue, stack) => {
         const prevValue = guardedObservable.get()
-        if (predicate(prevValue, nextValue)) {
+        if (predicate(nextValue, prevValue)) {
           guardedObservable.set(nextValue, stack)
         } else {
           // The value is not passed through, but an error must be
@@ -527,6 +568,7 @@ export const createObservable = <
     mapEntries,
     getInitialValue,
     guard,
+    finally: final,
   }
 
   return observable

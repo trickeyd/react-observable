@@ -537,6 +537,162 @@ function UserEmail() {
 
 This approach ensures that only components using specific properties re-render when those properties change, improving performance significantly.
 
+## Observable API
+
+Below are the core methods available on every Observable. Each method is shown with a brief example.
+
+### get
+
+Get the current value.
+
+```typescript
+const value = counter$.get()
+```
+
+### set
+
+Set a new value (direct or functional update).
+
+```typescript
+counter$.set(5)
+counter$.set((current) => current + 1)
+```
+
+### subscribe
+
+Listen for value changes.
+
+```typescript
+const unsubscribe = counter$.subscribe((value) => console.log(value))
+unsubscribe()
+```
+
+### stream
+
+Create a derived observable by transforming values. Can be chained.
+
+```typescript
+const result$ = counter$
+  .stream((count) => count * 2)
+  .stream((double) => double + 1)
+```
+
+### streamAsync
+
+Create a derived observable from an async function. Can be chained.
+
+```typescript
+const result$ = userId$
+  .streamAsync(async (id) => await fetchUser(id))
+  .stream((user) => user.name)
+```
+
+### tap
+
+Run a side effect on every emission (returns a new observable, can be chained).
+
+```typescript
+const result$ = counter$
+  .tap((value) => console.log('Tapped:', value))
+  .stream((x) => x * 2)
+```
+
+### delay
+
+Delay emissions by a given number of milliseconds. Can be chained.
+
+```typescript
+const result$ = counter$.delay(500).stream((x) => x * 2)
+```
+
+### catchError
+
+Handle errors in the observable stream. Can be chained.
+
+```typescript
+const safe$ = counter$
+  .stream((value) => {
+    if (value < 0) throw new Error('Negative!')
+    return value
+  })
+  .catchError((error, value, set) => set(0))
+  .stream((x) => x + 1)
+```
+
+### combineLatestFrom
+
+Combine with other observables and emit arrays of latest values. Can be chained.
+
+```typescript
+const result$ = counter$
+  .combineLatestFrom(settings$, theme$)
+  .stream(([count, settings, theme]) => `${count}-${theme}`)
+```
+
+### withLatestFrom
+
+Combine with other observables, but only emit when the source emits. Can be chained.
+
+```typescript
+const result$ = counter$
+  .withLatestFrom(settings$)
+  .stream(([count, settings]) => count + settings.offset)
+```
+
+### mapEntries
+
+For object observables, create observables for each property. Can be used in streams.
+
+```typescript
+const { name$, age$ } = user$.mapEntries({ keys: ['name', 'age'] })
+const upperName$ = name$.stream((name) => name.toUpperCase())
+```
+
+### guard
+
+Filter emissions based on a predicate. Can be chained.
+
+```typescript
+const increasing$ = counter$
+  .guard((next, prev) => next > prev)
+  .stream((x) => x * 2)
+```
+
+### finally
+
+Run a callback on value, error, or completion events. Can be chained. Used for cleanup.
+
+```typescript
+const result$ = counter$
+  .tap(() =>setIsLoading(true))
+  .stream(() =>throw new Error("Load Failed"))
+  .catchError((error) => logError(error))
+  .finally((type, value, error) => {
+    // regardless of what happened in the stream we need to set loading ot false.
+    setLoading(false)
+  })
+```
+
+### reset
+
+Reset the observable to its initial value.
+
+```typescript
+counter$.reset()
+```
+
+### emit / emitError / emitStreamHalted
+
+Manually emit a value, error, or halt the stream.
+
+```typescript
+counter$.emit()
+counter$.emitError(new Error('Oops'))
+counter$.emitStreamHalted()
+```
+
+---
+
 ## API Reference
 
 ### Core Functions

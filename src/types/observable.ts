@@ -143,9 +143,17 @@ export interface Observable<NullableInferredT> {
   getInitialValue: GetInitialValueOperator<NullableInferredT>
   guard: (
     predicate: (
-      previousValue: Readonly<NullableInferredT>,
       nextValue: Readonly<NullableInferredT>,
+      previousValue: Readonly<NullableInferredT>,
     ) => boolean,
+  ) => Observable<NullableInferredT>
+  finally: (
+    callback: (
+      type: 'onValue' | 'onError' | 'onComplete',
+      value?: Readonly<NullableInferredT>,
+      error?: Error,
+      stack?: ObservableStackItem[],
+    ) => void,
   ) => Observable<NullableInferredT>
 }
 
