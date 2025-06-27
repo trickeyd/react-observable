@@ -1,20 +1,26 @@
 import React from 'react'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import { ReactObservableProvider, ReactObservableContext } from './context'
 import { createObservable } from '../factories/observable'
 import { createStore, resetStore } from './create-store'
 import { Observable } from '../types/observable'
 
 // Helper to render with provider and wait for rehydration
-const renderWithProvider = async (component: React.ReactElement) => {
-  let utils: any
-  await act(async () => {
-    utils = render(
-      <ReactObservableProvider>{component}</ReactObservableProvider>,
-    )
-    // Wait a tick for provider async setup
-    await new Promise((resolve) => setTimeout(resolve, 0))
-  })
+const renderWithProvider = async (
+  component: React.ReactElement,
+  waitForTestId: string | null = 'has-store',
+) => {
+  const utils = render(
+    <ReactObservableProvider>{component}</ReactObservableProvider>,
+  )
+  if (waitForTestId) {
+    await waitFor(() => {
+      expect(
+        utils.queryByTestId?.(waitForTestId) ||
+          screen.queryByTestId(waitForTestId),
+      ).toBeInTheDocument()
+    })
+  }
   return utils
 }
 
@@ -44,7 +50,10 @@ describe('ReactObservableProvider', () => {
     })
 
     it('should render children correctly', async () => {
-      await renderWithProvider(<div data-testid="child">Child content</div>)
+      await renderWithProvider(
+        <div data-testid="child">Child content</div>,
+        'child',
+      )
       expect(screen.getByTestId('child')).toHaveTextContent('Child content')
     })
   })
@@ -58,9 +67,10 @@ describe('ReactObservableProvider', () => {
         return <div>Test</div>
       }
 
-      await renderWithProvider(<TestContextComponent />)
-
-      expect(contextValue).toBeDefined()
+      await renderWithProvider(<TestContextComponent />, null)
+      await waitFor(() => {
+        expect(contextValue).not.toBeNull()
+      })
       expect(typeof contextValue).toBe('object')
     })
 
@@ -72,8 +82,10 @@ describe('ReactObservableProvider', () => {
         return <div>Test</div>
       }
 
-      await renderWithProvider(<TestContextComponent />)
-
+      await renderWithProvider(<TestContextComponent />, null)
+      await waitFor(() => {
+        expect(contextValue).not.toBeNull()
+      })
       expect(contextValue).toHaveProperty('test')
       expect(contextValue.test).toHaveProperty('value$')
       expect(typeof contextValue.test.value$.get).toBe('function')
@@ -129,8 +141,10 @@ describe('ReactObservableProvider', () => {
         return <div>Test</div>
       }
 
-      await renderWithProvider(<TestObservableComponent />)
-
+      await renderWithProvider(<TestObservableComponent />, null)
+      await waitFor(() => {
+        expect(contextValue).not.toBeNull()
+      })
       const testObs = contextValue.test.value$
       expect(testObs.get()).toBeDefined()
 
@@ -167,11 +181,26 @@ describe('ReactObservableProvider', () => {
         return <div>Test</div>
       }
 
-      await renderWithProvider(<TestMultipleComponent />)
-
+      await renderWithProvider(<TestMultipleComponent />, null)
+      await waitFor(() => {
+        expect(contextValue).not.toBeNull()
+      })
       expect(contextValue).toHaveProperty('test')
       expect(contextValue).toHaveProperty('user')
       expect(contextValue).toHaveProperty('settings')
+    })
+
+    it('should not re-render children unnecessarily', async () => {
+      const renderSpy = jest.fn()
+      const TestRenderComponent = () => {
+        renderSpy()
+        return <div>Test</div>
+      }
+      await renderWithProvider(<TestRenderComponent />, null)
+      await waitFor(() => {
+        expect(renderSpy).toHaveBeenCalled()
+      })
+      expect(renderSpy).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -214,7 +243,10 @@ describe('ReactObservableProvider', () => {
         renderSpy()
         return <div>Test</div>
       }
-      await renderWithProvider(<TestRenderComponent />)
+      await renderWithProvider(<TestRenderComponent />, null)
+      await waitFor(() => {
+        expect(renderSpy).toHaveBeenCalled()
+      })
       expect(renderSpy).toHaveBeenCalledTimes(1)
     })
   })
@@ -240,7 +272,7 @@ describe('ReactObservableProvider', () => {
         return <div data-testid="typed">typed</div>
       }
 
-      await renderWithProvider(<TestTypeComponent />)
+      await renderWithProvider(<TestTypeComponent />, 'typed')
 
       // Wait a bit more for the provider to fully initialize
       await new Promise((resolve) => setTimeout(resolve, 10))
@@ -248,4 +280,9 @@ describe('ReactObservableProvider', () => {
       expect(screen.getByTestId('typed')).toHaveTextContent('typed')
     })
   })
+})
+
+afterEach(() => {
+  jest.clearAllMocks()
+  cleanup()
 })

@@ -26,7 +26,7 @@ export type ObservableSetter<NullableInferredT> = (
         currentValue: Readonly<NullableInferredT>,
       ) => NullableInferredT | Readonly<NullableInferredT>),
   stack?: ObservableStackItem[],
-) => void
+) => boolean
 
 /** @internal */
 export type SubscribeFunction<NullableInferredT> = (

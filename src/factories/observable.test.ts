@@ -274,12 +274,64 @@ describe('createObservable', () => {
 
     it('should handle tap operator', () => {
       const obs = createObservable({ initialValue: 'initial' })
-      const tapped = obs.tap((value) => {
-        // Side effect
-      })
+      const sideEffect = jest.fn()
+      const tapped = obs.tap(sideEffect)
 
+      // Should return a new observable, not the same one
+      expect(tapped).not.toBe(obs)
       expect(tapped.get()).toBe('initial')
-      expect(tapped).toBe(obs) // Should return same observable
+      // Should not call callback on creation
+      expect(sideEffect).not.toHaveBeenCalled()
+
+      // Test that tap calls callback and passes through values when emitted
+      const listener = jest.fn()
+      tapped.subscribe(listener)
+
+      obs.set('new value')
+      expect(sideEffect).toHaveBeenCalledWith('new value')
+      expect(listener).toHaveBeenCalledWith('new value', expect.any(Array))
+      expect(tapped.get()).toBe('new value')
+    })
+
+    it('should handle tap operator with chaining', () => {
+      const obs = createObservable({ initialValue: 5 })
+      const tap1 = jest.fn()
+      const tap2 = jest.fn()
+
+      const chained = obs.tap(tap1).tap(tap2)
+
+      expect(chained.get()).toBe(5)
+      // Should not call callbacks on creation
+      expect(tap1).not.toHaveBeenCalled()
+      expect(tap2).not.toHaveBeenCalled()
+
+      const listener = jest.fn()
+      chained.subscribe(listener)
+
+      obs.set(10)
+      expect(tap1).toHaveBeenCalledWith(10)
+      expect(tap2).toHaveBeenCalledWith(10)
+      expect(listener).toHaveBeenCalledWith(10, expect.any(Array))
+    })
+
+    it('should handle tap operator with objects', () => {
+      const obs = createObservable({ initialValue: { name: 'test', count: 0 } })
+      const sideEffect = jest.fn()
+      const tapped = obs.tap(sideEffect)
+
+      expect(tapped.get()).toEqual({ name: 'test', count: 0 })
+      // Should not call callback on creation
+      expect(sideEffect).not.toHaveBeenCalled()
+
+      const listener = jest.fn()
+      tapped.subscribe(listener)
+
+      obs.set({ name: 'updated', count: 5 })
+      expect(sideEffect).toHaveBeenCalledWith({ name: 'updated', count: 5 })
+      expect(listener).toHaveBeenCalledWith(
+        { name: 'updated', count: 5 },
+        expect.any(Array),
+      )
     })
 
     it('should handle delay operator', async () => {

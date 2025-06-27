@@ -70,15 +70,15 @@ export function createPersistentObservable<
           !equalityFn(value, reducedValue as Readonly<NullableInferredT>)) ||
         value === reducedValue
       ) {
-        return -1
+        return false
       }
 
       // Set the value locally first
-      const result = isSilent
+      const wasSet = isSilent
         ? base.setSilent(reducedValue)
         : base.set(reducedValue)
 
-      if (_persistentStorage) {
+      if (_persistentStorage && wasSet) {
         // Handle async setItem without making the setter async
         _persistentStorage
           .setItem(observableName, JSON.stringify(reducedValue))
@@ -91,7 +91,7 @@ export function createPersistentObservable<
           })
       }
 
-      return result
+      return wasSet
     }
 
   const setSilent: ObservableSetter<NullableInferredT> = _setInternal(true)

@@ -112,14 +112,19 @@ export const createObservable = <
           )) ||
         (!emitWhenValuesAreEqual && value === reducedValue)
       ) {
-        emitStreamHalted(stack)
-        return
+        if (!isSilent) {
+          // if silent then we can assume the user knows
+          // what they want to (or not to) emit
+          emitStreamHalted(stack)
+        }
+        return false
       }
 
       value = reducedValue
       if (!isSilent) {
         emit(stack)
       }
+      return true
     }
 
   const set: ObservableSetter<NullableInferredT> = _setInternal(false)
@@ -331,8 +336,25 @@ export const createObservable = <
   const tap: TapOperator<NullableInferredT> = (
     callback: (currentValue: Readonly<NullableInferredT>) => void,
   ) => {
-    callback(get() as Readonly<NullableInferredT>)
-    return observable as Observable<NullableInferredT>
+    const newObservable$ = createObservable<NullableInferredT, false>({
+      initialValue: get() as NullableInferredT,
+      name: `${name}_tap`,
+      emitWhenValuesAreEqual,
+    })
+
+    subscribe(
+      (val, stack) => {
+        callback(val)
+        newObservable$.setSilent(val, stack)
+        // here we force the emit regardless of the emitWhenValuesAreEqual flag
+        // but pass the origional flag downstream
+        newObservable$.emit(stack)
+      },
+      newObservable$.emitError,
+      newObservable$.emitStreamHalted,
+    )
+
+    return newObservable$
   }
 
   const delay = (milliseconds: number): Observable<NullableInferredT> => {
@@ -459,7 +481,7 @@ export const createObservable = <
           guardedObservable.set(nextValue, stack)
         } else {
           // The value is not passed through, but an error must be
-          guardedObservable.emitStreamHalted()
+          guardedObservable.emitStreamHalted(stack)
         }
       },
       guardedObservable.emitError,

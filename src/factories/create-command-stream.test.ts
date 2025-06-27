@@ -195,7 +195,7 @@ describe('createCommandStream', () => {
       })
 
       await command('test')
-      expect(sideEffect).toHaveBeenCalledWith(undefined)
+      expect(sideEffect).toHaveBeenCalledWith('test')
     })
 
     it('should handle catch error operations', async () => {
