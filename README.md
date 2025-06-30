@@ -1,6 +1,6 @@
 # @idiosync/react-observable
 
-A lightweight, type-safe, and reactive state management library for React applications. Designed for composability, streams, and ergonomic integration with React hooks and context.
+A lightweight, type-safe, and reactive state management library for React and React Native applications. Designed for composability, streams, and ergonomic integration with React hooks and context.
 
 ## Why Not Redux? (What This Library Fixes)
 
@@ -168,13 +168,14 @@ function Counter() {
 
 ### useEffectStream
 
-Create derived state that reacts to dependencies. Use this for computed values or when you need to react to prop changes:
+Create derived state that reacts to dependencies. This is kind of like a useEffect, useCallback and useState all rolled into one.
+Use this for computed values or when you need to react to prop changes:
 
 ```typescript
 import { useEffectStream } from '@idiosync/react-observable'
 
 function MultipliedCounter({ multiplier }: { multiplier: number }) {
-  const result = useEffectStream(
+  const [result, trigger] = useEffectStream(
     ({ $, store }) =>
       $.withLatestFrom(store.counter.count$)
         .stream(([[mult], count]) => count * mult),
@@ -183,6 +184,10 @@ function MultipliedCounter({ multiplier }: { multiplier: number }) {
 
   return <div>Result: {result}</div>
 }
+
+return (
+  <Touchable onPress={trigger} />
+)
 ```
 
 #### Dependency Arrays vs Input Arrays

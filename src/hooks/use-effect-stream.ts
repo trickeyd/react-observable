@@ -20,7 +20,7 @@ export const useEffectStream = <
     store: Store
   }) => Observable<InferNullable<ReturnT, IsNullable>>,
   inputs: InputT,
-): Readonly<InferNullable<ReturnT, IsNullable>> => {
+): [Readonly<InferNullable<ReturnT, IsNullable>>, () => void] => {
   type NullableInferredReturnT = InferNullable<ReturnT, IsNullable>
   const ref = useRef<Observable<NullableInferredReturnT> | undefined>(undefined)
   const subscriptionsRef = useRef<(() => void)[]>([])
@@ -74,5 +74,9 @@ export const useEffectStream = <
     }
   }, [])
 
-  return data
+  const execute = useCallback(() => {
+    ref.current?.emit()
+  }, [])
+
+  return [data, execute]
 }

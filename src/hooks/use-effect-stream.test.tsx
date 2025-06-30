@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom'
 import React from 'react'
 import { render, screen, act } from '@testing-library/react'
 import { useEffectStream } from './use-effect-stream'
@@ -30,7 +31,7 @@ const TestComponent = ({
   initialise: any
   deps?: unknown[]
 }) => {
-  const value = useEffectStream(initialise, deps || [])
+  const [value] = useEffectStream(initialise, deps || [])
   return <div data-testid="value">{JSON.stringify(value)}</div>
 }
 
@@ -46,7 +47,7 @@ const DebugComponent = () => {
     const obs = createObservable({ initialValue: 'debug value' })
     console.log('DebugComponent: Created observable, value:', obs.get())
 
-    const value = useEffectStream(({ $, store }) => {
+    const [value] = useEffectStream(({ $, store }) => {
       console.log('DebugComponent: Initialise function called')
       return obs
     }, [])
@@ -219,7 +220,7 @@ describe('useEffectStream', () => {
 
     it('should allow accessing store observables', async () => {
       const TestStoreComponent = () => {
-        const value = useEffectStream(({ $, store }) => {
+        const [value] = useEffectStream(({ $, store }) => {
           return (
             store.test?.value$ || createObservable({ initialValue: 'default' })
           )
@@ -238,8 +239,8 @@ describe('useEffectStream', () => {
       const obs = createObservable({ initialValue: 5 })
 
       const TestStreamComponent = () => {
-        const value = useEffectStream(({ $, store }) => {
-          return obs.stream((val) => val * 2)
+        const [value] = useEffectStream(({ $, store }) => {
+          return obs.stream((val) => (val ?? 0) * 2)
         }, [])
         return <div data-testid="value">{value}</div>
       }
@@ -253,11 +254,11 @@ describe('useEffectStream', () => {
       const obs = createObservable({ initialValue: 5 })
 
       const TestAsyncStreamComponent = () => {
-        const value = useEffectStream(({ $, store }) => {
+        const [value] = useEffectStream(({ $, store }) => {
           return obs.streamAsync(
             async (val) => {
               await new Promise((resolve) => setTimeout(resolve, 10))
-              return val * 2
+              return (val ?? 0) * 2
             },
             { executeOnCreation: true },
           )
@@ -280,8 +281,8 @@ describe('useEffectStream', () => {
       const obs2 = createObservable({ initialValue: 1 })
 
       const TestCombineComponent = () => {
-        const value = useEffectStream(({ $, store }) => {
-          return obs1.combineLatestFrom(obs2)
+        const [value] = useEffectStream(({ $, store }) => {
+          return obs1.combineLatestFrom(obs2) as any
         }, [])
         return <div data-testid="value">{JSON.stringify(value)}</div>
       }
@@ -296,8 +297,8 @@ describe('useEffectStream', () => {
       const obs2 = createObservable({ initialValue: 1 })
 
       const TestWithLatestComponent = () => {
-        const value = useEffectStream(({ $, store }) => {
-          return obs1.withLatestFrom(obs2)
+        const [value] = useEffectStream(({ $, store }) => {
+          return obs1.withLatestFrom(obs2) as any
         }, [])
         return <div data-testid="value">{JSON.stringify(value)}</div>
       }
@@ -339,8 +340,8 @@ describe('useEffectStream', () => {
       const obs2 = createObservable({ initialValue: 'obs2' })
 
       const MultiObsComponent = () => {
-        const value1 = useEffectStream(({ $, store }) => obs1, [])
-        const value2 = useEffectStream(({ $, store }) => obs2, [])
+        const [value1] = useEffectStream(({ $, store }) => obs1, [])
+        const [value2] = useEffectStream(({ $, store }) => obs2, [])
         return (
           <>
             <div data-testid="value1">{String(value1)}</div>
@@ -368,7 +369,7 @@ describe('useEffectStream', () => {
 
       const TestRenderComponent = () => {
         renderSpy()
-        const value = useEffectStream(({ $, store }) => obs, [])
+        const [value] = useEffectStream(({ $, store }) => obs, [])
         return <div data-testid="value">{String(value)}</div>
       }
 
@@ -383,7 +384,7 @@ describe('useEffectStream', () => {
 
       const TestRenderComponent = () => {
         renderSpy()
-        const value = useEffectStream(({ $, store }) => obs, [])
+        const [value] = useEffectStream(({ $, store }) => obs, [])
         return <div data-testid="value">{String(value)}</div>
       }
 
