@@ -20,6 +20,8 @@ import {
   ObservableStackItem,
   EmitStreamHaltedOperator,
   InferNullable,
+  ErrorResolution,
+  CatchErrorOperator,
 } from '../types/observable'
 import { Readonly } from '../types/access'
 
@@ -45,15 +47,25 @@ export const createObservable = <
   const createStack = (
     stack?: ObservableStackItem[],
     isError?: boolean,
-  ): ObservableStackItem[] => [
-    ...(stack ?? []),
-    {
-      id,
-      name: _observableName,
-      emitCount: _emitCount++,
-      isError: isError ?? stack?.[stack.length - 1]?.isError ?? false,
-    },
-  ]
+  ): ObservableStackItem[] => {
+    const lastStackItem = stack?.[stack.length - 1]
+    const splitName = name?.split('_')
+    const isCatchObservable = splitName?.[splitName.length - 1] === 'catchError'
+    // this is a bit of a hack to ensure the stack takes account
+    // of errors that are restored by the catchError operator
+    // TODO - need to find a better way to handle this
+    const addErrorToStream =
+      isError ?? (lastStackItem?.isError && !isCatchObservable) ?? false
+    return [
+      ...(stack ?? []),
+      {
+        id,
+        name: _observableName,
+        emitCount: _emitCount++,
+        isError: addErrorToStream,
+      },
+    ]
+  }
 
   const getInitialValue: GetInitialValueOperator<
     NullableInferredT
@@ -424,13 +436,7 @@ export const createObservable = <
    *
    * This design allows liberal use of throws throughout the stream, and helps pinpoint problem sections by allowing custom errors to be thrown at any catchError boundary. If the handler does nothing, the stream halts (no longer emits a special error).
    */
-  const catchError = (
-    onError?: (
-      error: Error,
-      currentValue: Readonly<NullableInferredT>,
-      setter: ObservableSetter<NullableInferredT>,
-    ) => void,
-  ) => {
+  const catchError: CatchErrorOperator<NullableInferredT> = (onError) => {
     const newObservable$ = createObservable<NullableInferredT, false>({
       initialValue: get(),
       name: `${name}_catchError`,
@@ -440,8 +446,12 @@ export const createObservable = <
     const handleError = (error: Error, stack?: ObservableStackItem[]) => {
       if (onError) {
         try {
-          onError(error, get() as Readonly<NullableInferredT>, set)
-          newObservable$.emitStreamHalted(stack)
+          const errorResolution = onError(error, get())
+          if (errorResolution) {
+            newObservable$.set(errorResolution.restoreValue, stack)
+          } else {
+            newObservable$.emitStreamHalted(stack)
+          }
         } catch (err) {
           newObservable$.emitError(err as Error, stack)
         }

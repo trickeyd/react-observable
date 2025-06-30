@@ -200,10 +200,13 @@ describe('createCommandStream', () => {
 
     it('should handle catch error operations', async () => {
       const command = createCommandStream<string, string>(({ $, store }) => {
-        return $.streamAsync(async (value) => {
-          throw new Error('Stream error')
-        }).catchError((error, currentValue, setter) => {
-          ;(setter as any)('recovered')
+        return $.stream((value) => {
+          if (value === 'test') {
+            throw new Error('Stream error')
+          }
+          return value
+        }).catchError((error, currentValue) => {
+          return { restoreValue: 'recovered' }
         }) as any
       })
 

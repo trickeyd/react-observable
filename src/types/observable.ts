@@ -71,9 +71,8 @@ export type DelayOperator<NullableInferredT> = (
 export type CatchErrorOperator<NullableInferredT> = (
   onError?: (
     error: Error,
-    currentValue: Readonly<NullableInferredT>,
-    setter: ObservableSetter<NullableInferredT>,
-  ) => void,
+    previousValue: Readonly<NullableInferredT>,
+  ) => ErrorResolution<NullableInferredT> | void,
 ) => Observable<NullableInferredT>
 
 /** @internal */
@@ -112,6 +111,10 @@ export type MapEntriesOperator<NullableInferredT> = <P extends string = '$'>({
 
 /** @internal */
 export type GetInitialValueOperator<NullableInferredT> = () => NullableInferredT
+
+export type ErrorResolution<NullableInferredT> = {
+  restoreValue: NullableInferredT
+}
 
 export interface Observable<NullableInferredT> {
   get: ObservableGetter<NullableInferredT>

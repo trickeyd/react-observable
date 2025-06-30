@@ -187,21 +187,17 @@ describe('createObservable', () => {
       const error = new Error('Test error')
       obs.emitError(error)
 
-      expect(errorHandler).toHaveBeenCalledWith(
-        error,
-        'initial',
-        expect.any(Function),
-      )
+      expect(errorHandler).toHaveBeenCalledWith(error, 'initial')
     })
 
     it('should allow recovery from errors', () => {
       const obs = createObservable({ initialValue: 'initial' })
-      const errorObservable = obs.catchError((error, currentValue, setter) => {
-        setter('recovered')
+      const errorObservable = obs.catchError((error, currentValue) => {
+        return { restoreValue: 'recovered' }
       })
 
       obs.emitError(new Error('Test error'))
-      expect(obs.get()).toBe('recovered')
+      expect(errorObservable.get()).toBe('recovered')
     })
   })
 

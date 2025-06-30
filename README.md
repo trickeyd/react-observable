@@ -301,9 +301,12 @@ counter$
     if (value < 0) throw new Error('Negative counter!')
     return value
   })
-  .catchError((error, currentValue, set) => {
+  .catchError((error, currentValue) => {
     console.error('Counter error:', error)
-    set(0) // Fallback value
+
+    // If this value is returned the stream will be restored wiht the new value
+    // Otherwise it will be halted
+    return { restoreValue }
   })
 ```
 
@@ -615,7 +618,7 @@ const safe$ = counter$
     if (value < 0) throw new Error('Negative!')
     return value
   })
-  .catchError((error, value, set) => set(0))
+  .catchError((error, value) => ({ restoreValue: 0 }))
   .stream((x) => x + 1)
 ```
 
