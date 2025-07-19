@@ -169,7 +169,7 @@ describe('useEffectStream', () => {
 
     it('should set up subscription on first mount and return initial value', async () => {
       const obs = createObservable({ initialValue: 'initial value' })
-      const subscribeSpy = jest.spyOn(obs, 'subscribe')
+      const subscribeSpy = jest.spyOn(obs, 'subscribeWithValue')
 
       await renderWithProvider(
         <TestComponent initialise={({ $, store }) => obs} deps={[]} />,
@@ -312,7 +312,7 @@ describe('useEffectStream', () => {
   describe('Subscription management', () => {
     it('should subscribe to observable on mount', async () => {
       const obs = createObservable({ initialValue: 'test' })
-      const subscribeSpy = jest.spyOn(obs, 'subscribe')
+      const subscribeSpy = jest.spyOn(obs, 'subscribeWithValue')
 
       await renderWithProvider(
         <TestComponent initialise={({ $, store }) => obs} />,
@@ -324,7 +324,7 @@ describe('useEffectStream', () => {
     it('should unsubscribe on unmount', async () => {
       const obs = createObservable({ initialValue: 'test' })
       const unsubscribeSpy = jest.fn()
-      jest.spyOn(obs, 'subscribe').mockReturnValue(unsubscribeSpy)
+      jest.spyOn(obs, 'subscribeWithValue').mockReturnValue(unsubscribeSpy)
 
       const { unmount } = await renderWithProvider(
         <TestComponent initialise={({ $, store }) => obs} />,
@@ -436,7 +436,7 @@ describe('useEffectStream', () => {
 
     it('should handle React Strict Mode double mounting', async () => {
       const obs = createObservable({ initialValue: 'strict mode test' })
-      const subscribeSpy = jest.spyOn(obs, 'subscribe')
+      const subscribeSpy = jest.spyOn(obs, 'subscribeWithValue')
 
       // Properly simulate React Strict Mode by wrapping in StrictMode
       await renderWithProvider(
