@@ -55,7 +55,7 @@ export const useEffectStream = <
   useEffect(() => {
     if (!ref.current) throw new Error('No observable found')
 
-    const sub = ref.current.subscribe(
+    const sub = ref.current.subscribeWithValue(
       (newData: Readonly<NullableInferredReturnT>) => {
         setData(newData)
       },
