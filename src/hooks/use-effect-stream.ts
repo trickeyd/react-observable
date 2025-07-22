@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { Observable } from '../types/observable'
 import { useEqualityChecker } from './use-equality-checker'
 import { Readonly } from '../types/access'
@@ -75,8 +75,9 @@ export const useEffectStream = <
   }, [])
 
   const execute = useCallback(() => {
+    console.log('execute - react-observable', ref.current)
     ref.current?.emit()
   }, [])
 
-  return [data, execute]
+  return useMemo(() => [data, execute], [data, execute])
 }

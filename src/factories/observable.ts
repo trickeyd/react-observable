@@ -86,6 +86,7 @@ export const createObservable = <
     const newStack = createStack(stack)
     const unsubscribeIds = _listenerRecords.reduce<string[]>(
       (acc, { listener, once, id }) => {
+        console.log('emit', value, newStack)
         listener?.(value as Readonly<NullableInferredT>, newStack)
         return once ? [...acc, id] : acc
       },
