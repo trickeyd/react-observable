@@ -75,8 +75,7 @@ export const useEffectStream = <
   }, [])
 
   const execute = useCallback(() => {
-    console.log('execute - react-observable', ref.current)
-    ref.current?.emit()
+    entry$.emit()
   }, [])
 
   return useMemo(() => [data, execute], [data, execute])
