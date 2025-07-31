@@ -20,7 +20,6 @@ import {
   ObservableStackItem,
   EmitStreamHaltedOperator,
   InferNullable,
-  ErrorResolution,
   CatchErrorOperator,
 } from '../types/observable'
 import { Readonly } from '../types/access'
@@ -46,7 +45,7 @@ export const createObservable = <
 
   const createStack = (
     stack?: ObservableStackItem[],
-    isError?: boolean,
+    errorMessage?: string,
   ): ObservableStackItem[] => {
     const lastStackItem = stack?.[stack.length - 1]
     const splitName = name?.split('_')
@@ -54,8 +53,9 @@ export const createObservable = <
     // this is a bit of a hack to ensure the stack takes account
     // of errors that are restored by the catchError operator
     // TODO - need to find a better way to handle this
-    const addErrorToStream =
-      isError ?? (lastStackItem?.isError && !isCatchObservable) ?? false
+    const addErrorToStream = errorMessage
+      ? true
+      : ((lastStackItem?.isError && !isCatchObservable) ?? false)
     return [
       ...(stack ?? []),
       {
@@ -63,6 +63,7 @@ export const createObservable = <
         name: _observableName,
         emitCount: _emitCount++,
         isError: addErrorToStream,
+        errorMessage,
       },
     ]
   }
@@ -95,7 +96,10 @@ export const createObservable = <
   }
 
   const emitError: EmitErrorOperator = (err: Error, stack) => {
-    const newStack = createStack(stack, true)
+    const newStack = createStack(
+      stack,
+      err.message ?? err.name ?? err.toString(),
+    )
     _listenerRecords.forEach(({ onError }) => onError?.(err, newStack))
   }
 
@@ -207,6 +211,7 @@ export const createObservable = <
     const combinationObservable$ = createObservable<CombinedValues, false>({
       initialValue: initialValues,
       emitWhenValuesAreEqual,
+      name: `${name}_combineLatestFrom:${observables.map((obs) => obs.getName()).join(',')}:${name}`,
     })
 
     subscribeFunctions.forEach((sub, i) => {
@@ -240,6 +245,7 @@ export const createObservable = <
         ...observables.map((obs) => obs.get()),
       ] as CombinedValues,
       emitWhenValuesAreEqual,
+      name: `${name}_withLatestFrom:${observables.map((obs) => obs.getName()).join(',')}:${name}`,
     })
 
     subscribe(
@@ -522,6 +528,7 @@ export const createObservable = <
     const guardedObservable = createObservable<NullableInferredT, false>({
       initialValue: get(),
       emitWhenValuesAreEqual,
+      name: `${name}_guard`,
     })
 
     // Subscribe to the original observable

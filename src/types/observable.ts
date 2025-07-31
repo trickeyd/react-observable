@@ -11,6 +11,7 @@ export interface ObservableStackItem {
   name: string
   emitCount: number
   isError: boolean
+  errorMessage?: string
 }
 
 /** @internal */
