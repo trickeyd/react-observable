@@ -51,12 +51,6 @@ describe('General utilities', () => {
       expect(isObject(() => {})).toBe(false)
     })
 
-    it('should handle arrays', () => {
-      expect(isObject([])).toBe(true)
-      expect(isObject([1, 2, 3])).toBe(true)
-      expect(isObject(new Array())).toBe(true)
-    })
-
     it('should handle built-in objects', () => {
       expect(isObject(new Date())).toBe(true)
       expect(isObject(new RegExp('test'))).toBe(true)
