@@ -117,7 +117,7 @@ export type ErrorResolution<NullableInferredT> = {
   restoreValue: NullableInferredT
 }
 
-export interface Observable<NullableInferredT> extends ObservableBase {
+export interface Observable<NullableInferredT> {
   get: ObservableGetter<NullableInferredT>
   set: ObservableSetter<NullableInferredT>
   setSilent: ObservableSetter<NullableInferredT>

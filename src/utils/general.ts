@@ -1,5 +1,3 @@
-import { Duckservable } from 'src/types/observable'
-
 export const tryCatch = async <T>(
   fn: () => Promise<T>,
   errorMessage?: string,
