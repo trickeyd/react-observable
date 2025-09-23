@@ -18,16 +18,39 @@ export const getStoreObservable = <T>(
  * Later objects take precedence over earlier ones.
  * Throws an error if any input is not an object.
  */
+type DeepMerge<T, U> = {
+  [K in keyof T | keyof U]: K extends keyof T
+    ? K extends keyof U
+      ? T[K] extends Record<string, any>
+        ? U[K] extends Record<string, any>
+          ? DeepMerge<T[K], U[K]>
+          : U[K]
+        : U[K]
+      : T[K]
+    : K extends keyof U
+      ? U[K]
+      : never
+}
+type DeepMergeAll<T extends readonly any[]> = T extends readonly [
+  infer First,
+  ...infer Rest,
+]
+  ? Rest extends readonly any[]
+    ? DeepMerge<First, DeepMergeAll<Rest>>
+    : First
+  : {}
 type StoreObject = Record<string, Record<string, Duckservable>>
-export const mergeStoreObjects = (...storeObjects: StoreObject[]): Store => {
+export const mergeStoreObjects = <const S extends readonly StoreObject[]>(
+  ...storeObjects: S
+): DeepMergeAll<S> => {
   // Validate all inputs are objects
-  return storeObjects.reduce<StoreObject>((store, storeObject, index) => {
+  return storeObjects.reduce((store, storeObject, index) => {
     if (!isObject(store)) {
       throw new Error(
         `Store object at index ${index} is not a valid object. Got: ${typeof store}`,
       )
     }
-    return Object.entries(storeObject).reduce<StoreObject>(
+    return Object.entries(storeObject).reduce(
       (storeSegments, [key, segment]) => {
         if (!isObject(segment)) {
           throw new Error(
@@ -40,5 +63,5 @@ export const mergeStoreObjects = (...storeObjects: StoreObject[]): Store => {
       },
       store,
     )
-  }, {} as StoreObject)
+  }, {}) as DeepMergeAll<S>
 }
