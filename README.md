@@ -76,6 +76,35 @@ export function createAppStore() {
 }
 ```
 
+#### Merging Multiple Store Objects
+
+When you have multiple store objects to combine (like local and shared stores), use the `mergeStoreObjects` utility:
+
+```typescript
+// src/store/index.ts
+import { createStore, mergeStoreObjects } from '@idiosync/react-observable'
+import * as localStore from './store'
+import { sharedStore } from '@mycompany/shared-store'
+
+export function createAppStore() {
+  const store = mergeStoreObjects(localStore, sharedStore)
+
+  createStore(store)
+  return store
+}
+```
+
+Note: In this example, the entire local store is exported using an index file (`./store`), unlike the previous examples where individual modules were imported separately. This pattern works well with `mergeStoreObjects` as it can handle the complete store structure.
+
+`mergeStoreObjects` provides:
+
+- **Type-safe merging**: Ensures all objects contain observables
+- **Deep merging**: Combines nested objects recursively
+- **Runtime validation**: Throws clear errors for invalid structures
+- **Flexible typing**: Works with any observable types using duck typing
+
+The function uses `Duckservable` (a duck-typed version of `Observable<any>`) to provide compile-time structure checking without generic type conflicts.
+
 ### 3. Type Augmentation (Required for Full Type Inference)
 
 For the library to work properly with full type inference, create a type augmentation file:

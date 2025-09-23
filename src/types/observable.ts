@@ -117,7 +117,7 @@ export type ErrorResolution<NullableInferredT> = {
   restoreValue: NullableInferredT
 }
 
-export interface Observable<NullableInferredT> {
+export interface Observable<NullableInferredT> extends ObservableBase {
   get: ObservableGetter<NullableInferredT>
   set: ObservableSetter<NullableInferredT>
   setSilent: ObservableSetter<NullableInferredT>
@@ -160,6 +160,8 @@ export interface Observable<NullableInferredT> {
     ) => void,
   ) => Observable<NullableInferredT>
 }
+
+export type Duckservable = Record<keyof Observable<any>, any>
 
 export interface CreateObservableParams<NullableInferredT> {
   initialValue: NullableInferredT | (() => NullableInferredT)

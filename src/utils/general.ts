@@ -1,3 +1,5 @@
+import { Duckservable } from 'src/types/observable'
+
 export const tryCatch = async <T>(
   fn: () => Promise<T>,
   errorMessage?: string,
@@ -36,7 +38,7 @@ export const isFunction = (value: unknown): value is Function =>
   typeof value === 'function'
 
 export const isObject = (value: unknown): value is object =>
-  value !== null && typeof value === 'object'
+  value !== null && typeof value === 'object' && !Array.isArray(value)
 
 export const isPlainObject = (value: unknown): value is object =>
   isObject(value) && value.constructor === Object
