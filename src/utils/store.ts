@@ -18,19 +18,16 @@ export const getStoreObservable = <T>(
  * Later objects take precedence over earlier ones.
  * Throws an error if any input is not an object.
  */
-export const mergeStoreObjects = <
-  T extends Record<string, Record<string, Duckservable>>,
->(
-  ...storeObjects: T[]
-): T => {
+type StoreObject = Record<string, Record<string, Duckservable>>
+export const mergeStoreObjects = (...storeObjects: StoreObject[]): Store => {
   // Validate all inputs are objects
-  return storeObjects.reduce<T>((store, storeObject, index) => {
+  return storeObjects.reduce<StoreObject>((store, storeObject, index) => {
     if (!isObject(store)) {
       throw new Error(
         `Store object at index ${index} is not a valid object. Got: ${typeof store}`,
       )
     }
-    return Object.entries(storeObject).reduce<T>(
+    return Object.entries(storeObject).reduce<StoreObject>(
       (storeSegments, [key, segment]) => {
         if (!isObject(segment)) {
           throw new Error(
@@ -43,5 +40,5 @@ export const mergeStoreObjects = <
       },
       store,
     )
-  }, {} as T)
+  }, {} as StoreObject)
 }
