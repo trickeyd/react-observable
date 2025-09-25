@@ -159,6 +159,7 @@ export interface Observable<NullableInferredT> {
       stack?: ObservableStackItem[],
     ) => void,
   ) => Observable<NullableInferredT>
+  getIsFlushable: () => boolean
 }
 
 export type Duckservable = Record<keyof Observable<any>, any>
@@ -171,6 +172,7 @@ export interface CreateObservableParams<NullableInferredT> {
   ) => boolean
   emitWhenValuesAreEqual?: boolean
   name?: string
+  isFlushable?: boolean
 }
 
 /** @internal */

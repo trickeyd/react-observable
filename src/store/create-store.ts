@@ -64,7 +64,7 @@ export const createStore = (
         observable.setName(path)
       }
 
-      const isFlushable = true // !options || !options.skipAutomaticFlushes
+      const isFlushable = observable.getIsFlushable()
 
       if (isFlushable) {
         flushableObservables.push(observable)

@@ -35,6 +35,7 @@ export const createObservable = <
   const initialValue = params?.initialValue
   const equalityFn = params?.equalityFn
   const name = params?.name
+  const isFlushable = params?.isFlushable ?? true
   const emitWhenValuesAreEqual = params?.emitWhenValuesAreEqual ?? false
 
   const id = uuid()
@@ -558,6 +559,7 @@ export const createObservable = <
   }
 
   const getId = (): string => id
+  const getIsFlushable = (): boolean => isFlushable
 
   const observable: Observable<NullableInferredT> = {
     get,
@@ -586,6 +588,7 @@ export const createObservable = <
     getInitialValue,
     guard,
     finally: final,
+    getIsFlushable,
   }
 
   return observable
