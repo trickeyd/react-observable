@@ -8,7 +8,7 @@ import { Store } from '../types/store'
 import { store$ } from '../store/create-store'
 import { Safe } from '../types/access'
 import { getIsAppropriateStream } from '../utils/stream'
-import { getCallsiteName, uuid } from '../utils/general'
+import { getModuleFunctionName, uuid } from '../utils/general'
 
 interface Props<NullableInferredReturnT> {
   onError?: (err: Error, stack?: ObservableStackItem[]) => void
@@ -40,7 +40,7 @@ export const createCommandStream = <
 } => {
   type NullableInferredReturnT = InferNullable<ReturnT, IsNullable>
 
-  const name = getCallsiteName({
+  const name = getModuleFunctionName({
     fallback: 'command-stream',
   })
 

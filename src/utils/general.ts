@@ -71,6 +71,57 @@ export function isDevEnv(): boolean {
   )
 }
 
+// Specialized version for command streams. Filters out Metro module loading frames
+// and just returns the top-level function name where the stream was created.
+export function getModuleFunctionName(options?: CallsiteNameOptions): string {
+  const libHint =
+    options?.libHint ??
+    /(react-observable|node_modules\/react-observable|src\/utils\/|src\/factories\/|src\/store\/|src\/hooks\/|metroRequire|guardedLoadModule|loadModuleImplementation)/
+  const fallback = options?.fallback ?? 'command-stream'
+
+  if (!isDevEnv()) return fallback
+
+  const error = new Error()
+  const raw = String(error.stack || '')
+  const lines = raw.split(/\r?\n/)
+  if (!lines.length) return fallback
+
+  const metroNames = new Set([
+    'metroRequire',
+    'guardedLoadModule',
+    'loadModuleImplementation',
+    'anonymous',
+  ])
+
+  for (const line of lines.map((l) => l.trim())) {
+    if (!line) continue
+    const v8 = line.match(/at\s+([^\s(]+)\s*\(([^)]+)\)/)
+    if (v8) {
+      const fn = v8[1]
+      if (
+        !libHint.test(line) &&
+        !metroNames.has(fn) &&
+        fn !== 'getModuleFunctionName'
+      ) {
+        return fn
+      }
+    }
+    const fnAtLoc = line.match(/at\s+([^\s(]+)@(.+)/)
+    if (fnAtLoc) {
+      const fn = fnAtLoc[1]
+      if (
+        !libHint.test(line) &&
+        !metroNames.has(fn) &&
+        fn !== 'getModuleFunctionName'
+      ) {
+        return fn
+      }
+    }
+  }
+
+  return fallback
+}
+
 // Dev-only helper that returns a human-friendly callsite label based on the
 // first user-land stack frame. It avoids library frames using libHint.
 // Returns fallback when not in dev or when a stack cannot be parsed.
