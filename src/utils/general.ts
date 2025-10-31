@@ -80,8 +80,6 @@ export function getCallsiteName(options?: CallsiteNameOptions): string {
     /(react-observable|node_modules\/react-observable|src\/utils\/|src\/factories\/|src\/store\/|src\/hooks\/)/
   const fallback = options?.fallback ?? 'observable'
 
-  console.log('isDevEnv', isDevEnv())
-
   // Only attempt stack parsing in dev to avoid runtime overhead and engine variance
   if (!isDevEnv()) return fallback
 
@@ -89,36 +87,64 @@ export function getCallsiteName(options?: CallsiteNameOptions): string {
   const error = new Error()
   const raw = String(error.stack || '')
   const lines = raw.split(/\r?\n/)
-  console.log('lines', lines)
   if (!lines.length) return fallback
 
-  // Find the first frame that looks like user code and not our library
-  const frame = lines
+  // Parse frames into function names and locations, excluding library frames
+  type ParsedFrame = {
+    raw: string
+    functionName?: string
+    location?: string
+  }
+
+  const reactInternalNames = new Set([
+    'renderWithHooks',
+    'updateFunctionComponent',
+    'beginWork',
+    'performUnitOfWork',
+    'workLoopSync',
+    'performSyncWorkOnRoot',
+    'flushSyncCallbacks',
+  ])
+
+  const parsed: ParsedFrame[] = lines
     .map((l) => l.trim())
-    .filter((l) => l && !libHint.test(l))
-    .find((l) => /\.(tsx?|jsx?)\b/.test(l))
+    .filter((l) => !!l)
+    .map((l) => {
+      const v8 = l.match(/at\s+([^\s(]+)\s+\(([^)]+)\)/)
+      if (v8) return { raw: l, functionName: v8[1], location: v8[2] }
+      const fnAtLoc = l.match(/at\s+([^\s(]+)@(.+)/)
+      if (fnAtLoc)
+        return { raw: l, functionName: fnAtLoc[1], location: fnAtLoc[2] }
+      const plain = l.match(/at\s+(.+):(\d+):(\d+)/)
+      if (plain)
+        return { raw: l, location: `${plain[1]}:${plain[2]}:${plain[3]}` }
+      return { raw: l }
+    })
+    .filter((f) => !libHint.test(f.raw))
 
-  console.log('frame', frame)
-  if (!frame) return fallback
+  const getIdx = parsed.findIndex((f) => f.functionName === 'getCallsiteName')
+  const afterGet = getIdx >= 0 ? parsed.slice(getIdx + 1) : parsed
 
-  // Try common V8 style: "at fnName (path/to/file.tsx:123:45)"
-  const fnMatch = frame.match(/at\s+([^\s(]+)\s+\(([^)]+)\)/)
-  if (fnMatch) {
-    const fnName = fnMatch[1]
-    const loc = fnMatch[2]
-    return `${fnName} @ ${loc}`
+  const names: string[] = []
+  for (const f of afterGet) {
+    const name = f.functionName
+    if (!name) continue
+    if (reactInternalNames.has(name)) break
+    names.push(name)
+    if (/^[A-Z][A-Za-z0-9_$]*$/.test(name)) break
   }
 
-  // Try Hermes/JSC plain: "at path/to/file.tsx:123:45"
-  const plainMatch = frame.match(/at\s+(.+):(\d+):(\d+)/)
-  if (plainMatch) {
-    const file = plainMatch[1]
-    const line = plainMatch[2]
-    const col = plainMatch[3]
-    return `${file}:${line}:${col}`
+  if (names.length > 0) {
+    return names.reverse().join('->')
   }
 
-  console.log('returning ', frame || fallback)
-  // Fallback to the whole frame text if patterns differ
-  return frame || fallback
+  const first = afterGet.find((f) => f.location || f.functionName)
+  if (first) {
+    if (first.functionName && first.location)
+      return `${first.functionName} @ ${first.location}`
+    if (first.functionName) return first.functionName
+    if (first.location) return first.location
+  }
+
+  return fallback
 }
