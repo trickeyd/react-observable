@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "1.1.55",
+  "version": "1.1.56",
   "description": "State management control layer for React projects",
   "repository": {
     "type": "git",
