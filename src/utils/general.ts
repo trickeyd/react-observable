@@ -80,6 +80,8 @@ export function getCallsiteName(options?: CallsiteNameOptions): string {
     /(react-observable|node_modules\/react-observable|src\/utils\/|src\/factories\/|src\/store\/|src\/hooks\/)/
   const fallback = options?.fallback ?? 'observable'
 
+  console.log('isDevEnv', isDevEnv())
+
   // Only attempt stack parsing in dev to avoid runtime overhead and engine variance
   if (!isDevEnv()) return fallback
 
@@ -87,6 +89,7 @@ export function getCallsiteName(options?: CallsiteNameOptions): string {
   const error = new Error()
   const raw = String(error.stack || '')
   const lines = raw.split(/\r?\n/)
+  console.log('lines', lines)
   if (!lines.length) return fallback
 
   // Find the first frame that looks like user code and not our library
@@ -95,6 +98,7 @@ export function getCallsiteName(options?: CallsiteNameOptions): string {
     .filter((l) => l && !libHint.test(l))
     .find((l) => /\.(tsx?|jsx?)\b/.test(l))
 
+  console.log('frame', frame)
   if (!frame) return fallback
 
   // Try common V8 style: "at fnName (path/to/file.tsx:123:45)"
@@ -114,6 +118,7 @@ export function getCallsiteName(options?: CallsiteNameOptions): string {
     return `${file}:${line}:${col}`
   }
 
+  console.log('returning ', frame || fallback)
   // Fallback to the whole frame text if patterns differ
   return frame || fallback
 }
