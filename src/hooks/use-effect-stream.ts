@@ -6,6 +6,7 @@ import { Store } from '../types/store'
 import { createObservable } from '../factories/observable'
 import { useStoreProxy } from './use-store-proxy'
 import { InferNullable } from '../types/observable'
+import { getCallsiteName } from '../utils/general'
 
 export const useEffectStream = <
   ReturnT = any,
@@ -24,12 +25,15 @@ export const useEffectStream = <
   type NullableInferredReturnT = InferNullable<ReturnT, IsNullable>
   const ref = useRef<Observable<NullableInferredReturnT> | undefined>(undefined)
   const subscriptionsRef = useRef<(() => void)[]>([])
-  const entry$ = useRef(
-    createObservable<InputT, true>({
+  const entry$ = useRef<Observable<InferNullable<InputT, true>>>(undefined)
+  if (!entry$.current) {
+    const name = getCallsiteName()
+    entry$.current = createObservable<InputT | undefined, true>({
+      name,
       emitWhenValuesAreEqual: true,
       initialValue: inputs,
-    }),
-  ).current
+    })
+  }
 
   const handleSubscription = useCallback((unsubscribe: () => void) => {
     subscriptionsRef.current.push(unsubscribe)
@@ -40,14 +44,14 @@ export const useEffectStream = <
 
   if (!ref.current) {
     ref.current = initialise({
-      $: entry$ as Observable<InputT>,
+      $: entry$!.current as Observable<InputT>,
       store: observableStoreProxy,
     })
   }
 
   const isEqual = useEqualityChecker(inputs)
   if (!isEqual) {
-    entry$.set(inputs)
+    entry$.current!.set(inputs)
   }
 
   const [data, setData] = useState(ref.current.get)
@@ -75,7 +79,7 @@ export const useEffectStream = <
   }, [])
 
   const execute = useCallback(() => {
-    entry$.emit()
+    entry$.current!.emit()
   }, [])
 
   return useMemo(() => [data, execute], [data, execute])

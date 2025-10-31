@@ -56,3 +56,64 @@ export function uuid() {
   }
   return `${Date.now()}-${++uuidCounter}`
 }
+
+export type CallsiteNameOptions = {
+  libHint?: RegExp
+  fallback?: string
+}
+
+export function isDevEnv(): boolean {
+  const g: any =
+    typeof globalThis !== 'undefined' ? (globalThis as any) : ({} as any)
+  return (
+    (typeof g.__DEV__ !== 'undefined' && !!g.__DEV__) ||
+    (g.process && g.process.env && g.process.env.NODE_ENV !== 'production')
+  )
+}
+
+// Dev-only helper that returns a human-friendly callsite label based on the
+// first user-land stack frame. It avoids library frames using libHint.
+// Returns fallback when not in dev or when a stack cannot be parsed.
+export function getCallsiteName(options?: CallsiteNameOptions): string {
+  const libHint =
+    options?.libHint ??
+    /(react-observable|node_modules\/react-observable|src\/utils\/|src\/factories\/|src\/store\/|src\/hooks\/)/
+  const fallback = options?.fallback ?? 'observable'
+
+  // Only attempt stack parsing in dev to avoid runtime overhead and engine variance
+  if (!isDevEnv()) return fallback
+
+  // Capture stack
+  const error = new Error()
+  const raw = String(error.stack || '')
+  const lines = raw.split(/\r?\n/)
+  if (!lines.length) return fallback
+
+  // Find the first frame that looks like user code and not our library
+  const frame = lines
+    .map((l) => l.trim())
+    .filter((l) => l && !libHint.test(l))
+    .find((l) => /\.(tsx?|jsx?)\b/.test(l))
+
+  if (!frame) return fallback
+
+  // Try common V8 style: "at fnName (path/to/file.tsx:123:45)"
+  const fnMatch = frame.match(/at\s+([^\s(]+)\s+\(([^)]+)\)/)
+  if (fnMatch) {
+    const fnName = fnMatch[1]
+    const loc = fnMatch[2]
+    return `${fnName} @ ${loc}`
+  }
+
+  // Try Hermes/JSC plain: "at path/to/file.tsx:123:45"
+  const plainMatch = frame.match(/at\s+(.+):(\d+):(\d+)/)
+  if (plainMatch) {
+    const file = plainMatch[1]
+    const line = plainMatch[2]
+    const col = plainMatch[3]
+    return `${file}:${line}:${col}`
+  }
+
+  // Fallback to the whole frame text if patterns differ
+  return frame || fallback
+}
