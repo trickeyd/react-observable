@@ -47,6 +47,7 @@ export const createObservable = <
   const createStack = (
     stack?: ObservableStackItem[],
     errorMessage?: string,
+    error?: Error,
   ): ObservableStackItem[] => {
     const lastStackItem = stack?.[stack.length - 1]
     const splitName = name?.split('_')
@@ -65,6 +66,7 @@ export const createObservable = <
         emitCount: _emitCount++,
         isError: addErrorToStream,
         errorMessage,
+        error,
       },
     ]
   }
@@ -100,6 +102,7 @@ export const createObservable = <
     const newStack = createStack(
       stack,
       err.message ?? err.name ?? err.toString(),
+      err,
     )
     _listenerRecords.forEach(({ onError }) => onError?.(err, newStack))
   }

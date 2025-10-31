@@ -8,7 +8,7 @@ import { Store } from '../types/store'
 import { store$ } from '../store/create-store'
 import { Safe } from '../types/access'
 import { getIsAppropriateStream } from '../utils/stream'
-import { uuid } from '../utils/general'
+import { getCallsiteName, uuid } from '../utils/general'
 
 interface Props<NullableInferredReturnT> {
   onError?: (err: Error, stack?: ObservableStackItem[]) => void
@@ -39,9 +39,15 @@ export const createCommandStream = <
   exit$: Observable<InferNullable<ReturnT, IsNullable>>
 } => {
   type NullableInferredReturnT = InferNullable<ReturnT, IsNullable>
+
+  const name = getCallsiteName({
+    fallback: 'command-stream',
+  })
+
   const entry$ = createObservable<InputT>({
     initialValue: undefined,
     emitWhenValuesAreEqual: true,
+    name,
   })
   const exit$ = createObservable<ReturnT, IsNullable>(
     initialValue ? { initialValue } : undefined,
@@ -77,6 +83,7 @@ export const createCommandStream = <
           },
 
           (error, stack) => {
+            console.error('createCommandStream error (REACT-OBSERVABLE)', error)
             const isAppropriateStream = stack
               ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
