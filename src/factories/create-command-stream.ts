@@ -83,7 +83,6 @@ export const createCommandStream = <
           },
 
           (error, stack) => {
-            console.error('createCommandStream error (REACT-OBSERVABLE)', error)
             const isAppropriateStream = stack
               ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
