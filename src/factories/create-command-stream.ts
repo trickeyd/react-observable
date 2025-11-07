@@ -84,7 +84,6 @@ export const createCommandStream = <
           },
 
           (error, stack) => {
-            console.log(`stream ${executionId} completed with error`, error)
             const isAppropriateStream = stack
               ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
@@ -96,7 +95,6 @@ export const createCommandStream = <
           },
 
           (stack) => {
-            console.log(`stream ${executionId} abandoned with stack`, stack)
             const isAppropriateStream = stack
               ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
@@ -107,7 +105,6 @@ export const createCommandStream = <
           },
         )
 
-        console.log(`stream ${executionId} started with payload`, payload)
         entry$.set(payload, [
           {
             id: executionId,
