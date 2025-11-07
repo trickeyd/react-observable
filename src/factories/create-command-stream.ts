@@ -76,7 +76,6 @@ export const createCommandStream = <
             const isAppropriateStream = stack
               ? getIsAppropriateStream(stack, executionId, entryEmitCount)
               : false
-            console.log(`stream ${executionId} completed with data`, data)
             if (isAppropriateStream) {
               resolve([data as NullableInferredReturnT, undefined])
               unsubscribe()
