@@ -6,7 +6,7 @@ import { Store } from '../types/store'
 import { createObservable } from '../factories/observable'
 import { useStoreProxy } from './use-store-proxy'
 import { InferNullable } from '../types/observable'
-import { getCallsiteName } from '../utils/general'
+import { getCallsiteName, isDevEnv } from '../utils/general'
 
 export const useEffectStream = <
   ReturnT = any,
@@ -58,16 +58,20 @@ export const useEffectStream = <
 
   useEffect(() => {
     if (!ref.current) throw new Error('No observable found')
-
+    const isDev = isDevEnv()
     const sub = ref.current.subscribeWithValue(
       (newData: Readonly<NullableInferredReturnT>) => {
         setData(newData)
       },
       (error) => {
-        console.error('Error in useEffectStream', error)
+        if (isDev) {
+          console.error('Error in useEffectStream', error)
+        }
       },
       (stack) => {
-        console.log('Stream halted', stack)
+        if (isDev) {
+          console.log('Stream halted', stack)
+        }
       },
     )
 
