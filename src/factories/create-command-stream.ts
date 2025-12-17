@@ -13,6 +13,7 @@ import { getModuleFunctionName, uuid } from '../utils/general'
 interface Props<NullableInferredReturnT> {
   onError?: (err: Error, stack?: ObservableStackItem[]) => void
   initialValue?: NullableInferredReturnT
+  singleFlight?: boolean
 }
 
 type ExecuteReturnType<NullableInferredT> =
@@ -31,7 +32,11 @@ export const createCommandStream = <
     $: Observable<InputT>
     store: Store
   }) => Observable<InferNullable<ReturnT, IsNullable>>,
-  { onError, initialValue }: Props<InferNullable<ReturnT, IsNullable>> = {},
+  {
+    onError,
+    initialValue,
+    singleFlight,
+  }: Props<InferNullable<ReturnT, IsNullable>> = {},
 ): {
   (
     payload?: InputT,
@@ -53,6 +58,8 @@ export const createCommandStream = <
     initialValue ? { initialValue } : undefined,
   )
   const isInitialised = createObservable<boolean>({ initialValue: false })
+  let inFlight: Promise<ExecuteReturnType<NullableInferredReturnT>> | null =
+    null
 
   const initialiseStream = (store: Safe<Store>) => {
     const stream$: Observable<NullableInferredReturnT> = initialise({
@@ -65,67 +72,85 @@ export const createCommandStream = <
 
   const execute = (
     payload?: InputT,
-  ): Promise<ExecuteReturnType<NullableInferredReturnT>> =>
-    new Promise((resolve) => {
-      const run = () => {
-        const executionId = uuid()
-        const entryEmitCount = entry$.getEmitCount()
+  ): Promise<ExecuteReturnType<NullableInferredReturnT>> => {
+    if (singleFlight && inFlight) {
+      return inFlight
+    }
 
-        const unsubscribe = exit$.subscribe(
-          (data, stack) => {
-            const isAppropriateStream = stack
-              ? getIsAppropriateStream(stack, executionId, entryEmitCount)
-              : false
-            if (isAppropriateStream) {
-              resolve([data as NullableInferredReturnT, undefined])
-              unsubscribe()
-            }
-          },
+    const promise = new Promise<ExecuteReturnType<NullableInferredReturnT>>(
+      (resolve) => {
+        const run = () => {
+          const executionId = uuid()
+          const entryEmitCount = entry$.getEmitCount()
 
-          (error, stack) => {
-            const isAppropriateStream = stack
-              ? getIsAppropriateStream(stack, executionId, entryEmitCount)
-              : false
-            if (isAppropriateStream) {
-              onError && onError(error, stack)
-              resolve([undefined, error])
-              unsubscribe()
-            }
-          },
+          const unsubscribe = exit$.subscribe(
+            (data, stack) => {
+              const isAppropriateStream = stack
+                ? getIsAppropriateStream(stack, executionId, entryEmitCount)
+                : false
+              if (isAppropriateStream) {
+                resolve([data as NullableInferredReturnT, undefined])
+                unsubscribe()
+              }
+            },
 
-          (stack) => {
-            const isAppropriateStream = stack
-              ? getIsAppropriateStream(stack, executionId, entryEmitCount)
-              : false
-            if (isAppropriateStream) {
-              resolve([exit$.get() as NullableInferredReturnT, undefined])
-              unsubscribe()
-            }
-          },
-        )
+            (error, stack) => {
+              const isAppropriateStream = stack
+                ? getIsAppropriateStream(stack, executionId, entryEmitCount)
+                : false
+              if (isAppropriateStream) {
+                onError && onError(error, stack)
+                resolve([undefined, error])
+                unsubscribe()
+              }
+            },
 
-        entry$.set(payload, [
-          {
-            id: executionId,
-            name: `createStream:${executionId}`,
-            emitCount: entryEmitCount,
-            isError: false,
-          },
-        ])
-      }
+            (stack) => {
+              const isAppropriateStream = stack
+                ? getIsAppropriateStream(stack, executionId, entryEmitCount)
+                : false
+              if (isAppropriateStream) {
+                resolve([exit$.get() as NullableInferredReturnT, undefined])
+                unsubscribe()
+              }
+            },
+          )
 
-      if (!isInitialised.get()) {
-        if (!!store$.get()) {
-          initialiseStream(store$.get())
-        } else {
-          store$.subscribeOnce((store: Safe<Store>) => {
-            initialiseStream(store)
-          })
+          entry$.set(payload, [
+            {
+              id: executionId,
+              name: `createStream:${executionId}`,
+              emitCount: entryEmitCount,
+              isError: false,
+            },
+          ])
         }
-      }
 
-      run()
-    })
+        if (!isInitialised.get()) {
+          if (!!store$.get()) {
+            initialiseStream(store$.get())
+            run()
+          } else {
+            store$.subscribeOnce((store: Safe<Store>) => {
+              initialiseStream(store)
+              run()
+            })
+          }
+        } else {
+          run()
+        }
+      },
+    )
+
+    if (singleFlight) {
+      inFlight = promise
+      promise.finally(() => {
+        inFlight = null
+      })
+    }
+
+    return promise
+  }
   execute.exit$ = exit$
   return execute
 }

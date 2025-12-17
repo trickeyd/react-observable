@@ -69,6 +69,10 @@ export type DelayOperator<NullableInferredT> = (
   milliseconds: number,
 ) => Observable<NullableInferredT>
 
+export type ThrottleOperator<NullableInferredT> = (
+  milliseconds: number,
+) => Observable<NullableInferredT>
+
 /** @internal */
 export type CatchErrorOperator<NullableInferredT> = (
   onError?: (
@@ -136,6 +140,7 @@ export interface Observable<NullableInferredT> {
   ) => Observable<[NullableInferredT, ...{ [K in keyof OtherT]: OtherT[K] }]>
   tap: TapOperator<NullableInferredT>
   delay: DelayOperator<NullableInferredT>
+  throttle: ThrottleOperator<NullableInferredT>
   catchError: CatchErrorOperator<NullableInferredT>
   reset: ResetOperator
   getName: () => string

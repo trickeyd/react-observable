@@ -400,6 +400,35 @@ export const createObservable = <
     return newObservable$
   }
 
+  const throttle = (
+    milliseconds: number,
+  ): Observable<NullableInferredT> => {
+    const newObservable$ = createObservable<NullableInferredT, false>({
+      initialValue: get() as NullableInferredT,
+      name: `${name}_throttle_${milliseconds}`,
+      emitWhenValuesAreEqual,
+    })
+
+    let lastEmittedAt = 0
+
+    const shouldEmit = (now: number) =>
+      lastEmittedAt === 0 || now - lastEmittedAt >= milliseconds
+
+    subscribeWithValue(
+      (val, stack) => {
+        const now = Date.now()
+        if (shouldEmit(now)) {
+          lastEmittedAt = now
+          newObservable$.set(val as NullableInferredT, stack)
+        }
+      },
+      newObservable$.emitError,
+      newObservable$.emitStreamHalted,
+    )
+
+    return newObservable$
+  }
+
   const mapEntries: MapEntriesOperator<NullableInferredT> = <
     P extends string = '$',
   >({
@@ -579,6 +608,7 @@ export const createObservable = <
     withLatestFrom,
     tap,
     delay,
+    throttle,
     catchError,
     reset,
     getName,
