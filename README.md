@@ -338,7 +338,7 @@ counter$
   .catchError((error, currentValue) => {
     console.error('Counter error:', error)
 
-    // If this value is returned the stream will be restored wiht the new value
+    // If this value is returned the stream will be restored whit the new value
     // Otherwise it will be halted
     return { restoreValue }
   })

@@ -1,3 +1,16 @@
+const normalizeCaughtError = (
+  error: unknown,
+  errorMessage?: string,
+): Error => {
+  const err = error instanceof Error ? error : new Error(String(error))
+  if (!errorMessage) {
+    return err
+  }
+  const wrapped = new Error(`${errorMessage}\n${err.message}`)
+  ;(wrapped as Error & { cause: Error }).cause = err
+  return wrapped
+}
+
 export const tryCatch = async <T>(
   fn: () => Promise<T>,
   errorMessage?: string,
@@ -6,11 +19,7 @@ export const tryCatch = async <T>(
     const result = await fn()
     return [result, undefined]
   } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error))
-    if (errorMessage) {
-      err.message = `${errorMessage}\n${err.message}`
-    }
-    return [undefined as T, err]
+    return [undefined as T, normalizeCaughtError(error, errorMessage)]
   }
 }
 
@@ -22,11 +31,7 @@ export const tryCatchSync = <T>(
     const result = fn()
     return [result, undefined]
   } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error))
-    if (errorMessage) {
-      err.message = `${errorMessage}\n${err.message}`
-    }
-    return [undefined as T, err]
+    return [undefined as T, normalizeCaughtError(error, errorMessage)]
   }
 }
 

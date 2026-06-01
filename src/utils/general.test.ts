@@ -136,6 +136,29 @@ describe('General utilities', () => {
       expect(error).toBeUndefined()
       expect(data).toEqual(complexValue)
     })
+
+    it('should prefix message without mutating read-only errors', async () => {
+      const original = new Error('underlying failure')
+      Object.defineProperty(original, 'message', {
+        value: 'underlying failure',
+        writable: false,
+        configurable: true,
+      })
+
+      const [data, error] = await tryCatch(
+        async () => {
+          throw original
+        },
+        'Stream Error: projection failed',
+      )
+
+      expect(data).toBeUndefined()
+      expect(error).not.toBe(original)
+      expect(error?.message).toBe(
+        'Stream Error: projection failed\nunderlying failure',
+      )
+      expect(error?.cause).toBe(original)
+    })
   })
 
   describe('tryCatchSync', () => {
