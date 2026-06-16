@@ -4,7 +4,7 @@ import {
   wrapObservable,
 } from './stream'
 import { createObservable } from '../factories/observable'
-import { ObservableStackItem } from '../types/observable'
+import { ObservableStackItem, StreamHaltReason } from '../types/observable'
 
 describe('Stream utilities', () => {
   describe('createStreamName', () => {
@@ -336,7 +336,55 @@ describe('Stream utilities', () => {
 
       wrapped.emitStreamHalted()
 
-      expect(completeHandler).toHaveBeenCalledWith(expect.any(Array))
+      expect(completeHandler).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({ reason: StreamHaltReason.Manual }),
+      )
+    })
+
+    it('should forward errors from source to proxy', () => {
+      const obs = createObservable({ initialValue: 'test' })
+      const handleSubscription = jest.fn()
+      const wrapped = wrapObservable(obs, handleSubscription)
+      const errorHandler = jest.fn()
+      wrapped.subscribe(undefined, errorHandler)
+
+      const error = new Error('wrapped error')
+      obs.emitError(error)
+
+      expect(errorHandler).toHaveBeenCalledWith(error, expect.any(Array))
+    })
+
+    it('should forward halt events from source to proxy', () => {
+      const obs = createObservable({ initialValue: 'test' })
+      const handleSubscription = jest.fn()
+      const wrapped = wrapObservable(obs, handleSubscription)
+      const haltHandler = jest.fn()
+      wrapped.subscribe(undefined, undefined, haltHandler)
+
+      obs.emitStreamHalted()
+
+      expect(haltHandler).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({ reason: StreamHaltReason.Manual }),
+      )
+    })
+
+    it('should cancel only the proxy branch', () => {
+      const obs = createObservable({ initialValue: 'test' })
+      const handleSubscription = jest.fn()
+      const wrapped = wrapObservable(obs, handleSubscription)
+      const originalListener = jest.fn()
+      const wrappedListener = jest.fn()
+      obs.subscribe(originalListener)
+      wrapped.subscribe(wrappedListener)
+
+      wrapped.cancelStream()
+      obs.set('updated')
+
+      expect(obs.getIsStreamCancelled()).toBe(false)
+      expect(originalListener).toHaveBeenCalledWith('updated', expect.any(Array))
+      expect(wrappedListener).not.toHaveBeenCalled()
     })
   })
 

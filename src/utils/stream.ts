@@ -1,6 +1,11 @@
 import { Store } from '../types/store'
 import { createObservable } from '../factories/observable'
-import { Observable, ObservableStackItem } from '../types/observable'
+import {
+  Observable,
+  ObservableStackItem,
+  StreamHaltReason,
+  StreamSubscription,
+} from '../types/observable'
 import { store$ } from '../store/create-store'
 
 export const createStreamName = (baseName: string): string => {
@@ -11,12 +16,24 @@ export const createStreamName = (baseName: string): string => {
 
 export const wrapObservable = <T extends unknown = unknown>(
   observable: Observable<T>,
-  onSubscription: (unsubscribe: () => void) => void,
+  onSubscription: (subscription: StreamSubscription) => void,
 ): Observable<T> => {
   const proxyObservable = createObservable({ initialValue: observable.get() })
-  onSubscription(
-    observable.subscribe((payload) => proxyObservable.set(payload)),
+  const unsubscribe = observable.subscribe(
+    (payload, stack) => proxyObservable.set(payload, stack),
+    proxyObservable.emitError,
+    (stack, event) => {
+      if (event?.reason === StreamHaltReason.Cancelled) {
+        proxyObservable.cancelStream(stack)
+        return
+      }
+      proxyObservable.emitStreamHalted(stack, event)
+    },
   )
+  onSubscription({
+    unsubscribe,
+    cancelStream: proxyObservable.cancelStream,
+  })
   return proxyObservable as Observable<T>
 }
 

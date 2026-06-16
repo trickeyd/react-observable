@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
-import { Observable } from '../types/observable'
+import { Observable, StreamSubscription } from '../types/observable'
 import { useEqualityChecker } from './use-equality-checker'
 import { Readonly } from '../types/access'
 import { Store } from '../types/store'
@@ -24,7 +24,7 @@ export const useEffectStream = <
 ): [Readonly<InferNullable<ReturnT, IsNullable>>, () => void] => {
   type NullableInferredReturnT = InferNullable<ReturnT, IsNullable>
   const ref = useRef<Observable<NullableInferredReturnT> | undefined>(undefined)
-  const subscriptionsRef = useRef<(() => void)[]>([])
+  const subscriptionsRef = useRef<StreamSubscription[]>([])
   const entry$ = useRef<Observable<InferNullable<InputT, true>>>(undefined)
   if (!entry$.current) {
     const name = getCallsiteName()
@@ -35,8 +35,8 @@ export const useEffectStream = <
     })
   }
 
-  const handleSubscription = useCallback((unsubscribe: () => void) => {
-    subscriptionsRef.current.push(unsubscribe)
+  const handleSubscription = useCallback((subscription: StreamSubscription) => {
+    subscriptionsRef.current.push(subscription)
   }, [])
 
   // Get store proxy - this will throw if no provider is available
@@ -68,16 +68,24 @@ export const useEffectStream = <
           console.error('Error in useEffectStream', error)
         }
       },
-      (stack) => {
+      (stack, event) => {
         if (isDev) {
-          console.log('Stream halted', stack)
+          console.log('Stream halted', stack, event)
         }
       },
     )
 
     return () => {
+      entry$.current?.cancelStream()
+      ref.current?.cancelStream()
+      subscriptionsRef.current.forEach((subscription) =>
+        subscription.cancelStream?.(),
+      )
+
       sub?.()
-      subscriptionsRef.current.forEach((unsub) => unsub())
+      subscriptionsRef.current.forEach((subscription) =>
+        subscription.unsubscribe(),
+      )
       subscriptionsRef.current.length = 0
     }
   }, [])

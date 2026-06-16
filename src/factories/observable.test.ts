@@ -1,4 +1,5 @@
 import { createObservable } from './observable'
+import { StreamHaltReason } from '../types/observable'
 
 describe('createObservable', () => {
   describe('Basic functionality', () => {
@@ -208,7 +209,10 @@ describe('createObservable', () => {
       obs.subscribe(undefined, undefined, completeHandler)
 
       obs.emitStreamHalted()
-      expect(completeHandler).toHaveBeenCalledWith(expect.any(Array))
+      expect(completeHandler).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({ reason: StreamHaltReason.Manual }),
+      )
     })
   })
 
@@ -266,6 +270,77 @@ describe('createObservable', () => {
       await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(streamed.get()).toBe(20)
+    })
+
+    it('should process async stream projections serially', async () => {
+      const obs = createObservable({ initialValue: 0 })
+      const started: number[] = []
+      const resolvers = new Map<number, (value: number) => void>()
+      const streamed = obs.streamAsync<number, false>(
+        (value) =>
+          new Promise((resolve) => {
+            started.push(value)
+            resolvers.set(value, resolve)
+          }),
+      )
+
+      obs.set(1)
+      obs.set(2)
+
+      expect(started).toEqual([1])
+
+      resolvers.get(1)?.(10)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(streamed.get()).toBe(10)
+      expect(started).toEqual([1, 2])
+
+      resolvers.get(2)?.(20)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(streamed.get()).toBe(20)
+    })
+
+    it('should ignore async stream results after cancellation', async () => {
+      const obs = createObservable({ initialValue: 0 })
+      let resolveProjection: ((value: number) => void) | undefined
+      const streamed = obs.streamAsync<number, false>(
+        () =>
+          new Promise((resolve) => {
+            resolveProjection = resolve
+          }),
+      )
+      const listener = jest.fn()
+      streamed.subscribe(listener)
+
+      obs.set(1)
+      streamed.cancelStream()
+      resolveProjection?.(10)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(streamed.get()).toBeUndefined()
+      expect(listener).not.toHaveBeenCalled()
+    })
+
+    it('should not run downstream tap after the branch is cancelled', async () => {
+      const obs = createObservable({ initialValue: 0 })
+      let resolveProjection: ((value: number) => void) | undefined
+      const sideEffect = jest.fn()
+      const tapped = obs
+        .streamAsync<number, false>(
+          () =>
+            new Promise((resolve) => {
+              resolveProjection = resolve
+            }),
+        )
+        .tap(sideEffect)
+
+      obs.set(1)
+      tapped.cancelStream()
+      resolveProjection?.(10)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(sideEffect).not.toHaveBeenCalled()
     })
 
     it('should handle tap operator', () => {
@@ -342,6 +417,19 @@ describe('createObservable', () => {
       // Wait for the delay
       await new Promise((resolve) => setTimeout(resolve, 20))
       expect(listener).toHaveBeenCalledWith('new value', expect.any(Array))
+    })
+
+    it('should not emit delayed values after cancellation', async () => {
+      const obs = createObservable({ initialValue: 'initial' })
+      const delayed = obs.delay(10)
+      const listener = jest.fn()
+      delayed.subscribe(listener)
+
+      obs.set('new value')
+      delayed.cancelStream()
+      await new Promise((resolve) => setTimeout(resolve, 20))
+
+      expect(listener).not.toHaveBeenCalled()
     })
 
     it('should handle guard operator', () => {
@@ -480,7 +568,10 @@ describe('createObservable', () => {
       obs.subscribe(undefined, undefined, onStreamHalted)
 
       obs.set('test') // Same value
-      expect(onStreamHalted).toHaveBeenCalledWith(expect.any(Array))
+      expect(onStreamHalted).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({ reason: StreamHaltReason.Unchanged }),
+      )
     })
 
     it('should call onStreamHalted when equalityFn returns true', () => {
@@ -493,7 +584,24 @@ describe('createObservable', () => {
 
       // Setting same ID but different name - equalityFn returns true, so should halt
       obs.set({ id: 1, name: 'different' })
-      expect(onStreamHalted).toHaveBeenCalledWith(expect.any(Array))
+      expect(onStreamHalted).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({ reason: StreamHaltReason.Unchanged }),
+      )
+    })
+
+    it('should not permanently cancel after a non-terminal halt', () => {
+      const obs = createObservable({
+        initialValue: 'test',
+        emitWhenValuesAreEqual: false,
+      })
+      const listener = jest.fn()
+      obs.subscribe(listener)
+
+      obs.set('test')
+      obs.set('next')
+
+      expect(listener).toHaveBeenCalledWith('next', expect.any(Array))
     })
   })
 
@@ -508,7 +616,10 @@ describe('createObservable', () => {
       downstream.subscribe(undefined, undefined, onStreamHalted)
 
       upstream.set(42) // Same value, should halt downstream
-      expect(onStreamHalted).toHaveBeenCalledWith(expect.any(Array))
+      expect(onStreamHalted).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({ reason: StreamHaltReason.Unchanged }),
+      )
     })
   })
 
@@ -549,10 +660,29 @@ describe('createObservable', () => {
 
       obs.emitStreamHalted()
       expect(callback).toHaveBeenCalledWith(
-        'onComplete',
+        'onHalt',
         undefined,
         undefined,
         expect.any(Array),
+        expect.objectContaining({ reason: StreamHaltReason.Manual }),
+      )
+    })
+
+    it('should call finally callback once on cancellation', () => {
+      const obs = createObservable({ initialValue: 1 })
+      const callback = jest.fn()
+      obs.finally(callback)
+
+      obs.cancelStream()
+      obs.cancelStream()
+
+      expect(callback).toHaveBeenCalledTimes(1)
+      expect(callback).toHaveBeenCalledWith(
+        'onCancel',
+        undefined,
+        undefined,
+        expect.any(Array),
+        expect.objectContaining({ reason: StreamHaltReason.Cancelled }),
       )
     })
 
