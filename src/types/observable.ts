@@ -15,6 +15,28 @@ export interface ObservableStackItem {
   error?: Error
 }
 
+export enum StreamHaltReason {
+  Manual = 'manual',
+  Unchanged = 'unchanged',
+  GuardRejected = 'guard_rejected',
+  ErrorHandled = 'error_handled',
+  Cancelled = 'cancelled',
+}
+
+export type StreamHaltEvent =
+  | { reason: StreamHaltReason.Manual; isTerminal: false }
+  | { reason: StreamHaltReason.Unchanged; isTerminal: false }
+  | { reason: StreamHaltReason.GuardRejected; isTerminal: false }
+  | { reason: StreamHaltReason.ErrorHandled; isTerminal: false }
+  | { reason: StreamHaltReason.Cancelled; isTerminal: true }
+
+export type FinallyEventType = 'onValue' | 'onError' | 'onHalt' | 'onCancel'
+
+export interface StreamSubscription {
+  unsubscribe: () => void
+  cancelStream?: () => void
+}
+
 /** @internal */
 export type ObservableGetter<NullableInferredT> =
   () => Readonly<NullableInferredT>
@@ -37,7 +59,10 @@ export type SubscribeFunction<NullableInferredT> = (
     stack?: ObservableStackItem[],
   ) => void,
   onError?: (error: Error, stack?: ObservableStackItem[]) => void,
-  onStreamHalted?: (stack?: ObservableStackItem[]) => void,
+  onStreamHalted?: (
+    stack?: ObservableStackItem[],
+    event?: StreamHaltEvent,
+  ) => void,
 ) => () => void
 
 /** @internal */
@@ -94,7 +119,13 @@ export type EmitErrorOperator = (
 ) => void
 
 /** @internal */
-export type EmitStreamHaltedOperator = (stack?: ObservableStackItem[]) => void
+export type EmitStreamHaltedOperator = (
+  stack?: ObservableStackItem[],
+  event?: StreamHaltEvent,
+) => void
+
+/** @internal */
+export type CancelStreamOperator = (stack?: ObservableStackItem[]) => void
 
 /** @internal */
 export type UnsubscribeFunction = (id: string) => void
@@ -149,6 +180,7 @@ export interface Observable<NullableInferredT> {
   emit: EmitOperator
   emitError: EmitErrorOperator
   emitStreamHalted: EmitStreamHaltedOperator
+  cancelStream: CancelStreamOperator
   mapEntries: MapEntriesOperator<NullableInferredT>
   getInitialValue: GetInitialValueOperator<NullableInferredT>
   guard: (
@@ -159,13 +191,15 @@ export interface Observable<NullableInferredT> {
   ) => Observable<NullableInferredT>
   finally: (
     callback: (
-      type: 'onValue' | 'onError' | 'onComplete',
+      type: FinallyEventType,
       value?: Readonly<NullableInferredT>,
       error?: Error,
       stack?: ObservableStackItem[],
+      event?: StreamHaltEvent,
     ) => void,
   ) => Observable<NullableInferredT>
   getIsFlushable: () => boolean
+  getIsStreamCancelled: () => boolean
 }
 
 export type Duckservable = Record<keyof Observable<any>, any>
@@ -188,7 +222,10 @@ export interface ListenerRecord<NullableInferredT> {
     stack?: ObservableStackItem[],
   ) => void
   onError?: (error: Error, stack?: ObservableStackItem[]) => void
-  onStreamHalted?: (stack?: ObservableStackItem[]) => void
+  onStreamHalted?: (
+    stack?: ObservableStackItem[],
+    event?: StreamHaltEvent,
+  ) => void
   id: string
   once?: boolean
 }

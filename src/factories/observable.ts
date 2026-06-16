@@ -21,6 +21,9 @@ import {
   EmitStreamHaltedOperator,
   InferNullable,
   CatchErrorOperator,
+  StreamHaltEvent,
+  StreamHaltReason,
+  CancelStreamOperator,
 } from '../types/observable'
 import { Readonly } from '../types/access'
 
@@ -43,6 +46,17 @@ export const createObservable = <
   let _emitCount = 0
   let _observableName: string = name ?? id
   let _listenerRecords: ListenerRecord<NullableInferredT>[] = []
+  let isStreamCancelled = false
+
+  const manualHaltEvent: StreamHaltEvent = {
+    reason: StreamHaltReason.Manual,
+    isTerminal: false,
+  }
+
+  const cancelledHaltEvent: StreamHaltEvent = {
+    reason: StreamHaltReason.Cancelled,
+    isTerminal: true,
+  }
 
   const createStack = (
     stack?: ObservableStackItem[],
@@ -79,6 +93,7 @@ export const createObservable = <
       : (initialValue as NullableInferredT)
 
   const getEmitCount = (): number => _emitCount
+  const getIsStreamCancelled = (): boolean => isStreamCancelled
 
   let value: NullableInferredT = getInitialValue()
 
@@ -87,6 +102,9 @@ export const createObservable = <
   > = (): Readonly<NullableInferredT> => value as Readonly<NullableInferredT>
 
   const emit: EmitOperator = (stack) => {
+    if (isStreamCancelled) {
+      return
+    }
     const newStack = createStack(stack)
     const unsubscribeIds = _listenerRecords.reduce<string[]>(
       (acc, { listener, once, id }) => {
@@ -99,6 +117,9 @@ export const createObservable = <
   }
 
   const emitError: EmitErrorOperator = (err: Error, stack) => {
+    if (isStreamCancelled) {
+      return
+    }
     const newStack = createStack(
       stack,
       err.message ?? err.name ?? err.toString(),
@@ -108,18 +129,35 @@ export const createObservable = <
   }
 
   /**
-   * emitStreamHalted notifies all subscribers that the stream has been halted.
-   * After calling emitStreamHalted, no further values or errors will be emitted.
-   * Subscribers can provide an onStreamHalted callback to react to stream halting.
+   * emitStreamHalted notifies subscribers that an emission halted. Terminal
+   * halt events, such as cancellation, permanently stop future emissions.
    */
-  const emitStreamHalted: EmitStreamHaltedOperator = (stack) => {
+  const emitStreamHalted: EmitStreamHaltedOperator = (
+    stack,
+    event = manualHaltEvent,
+  ) => {
+    if (isStreamCancelled) {
+      return
+    }
+    if (event.isTerminal) {
+      isStreamCancelled = true
+    }
     const newStack = createStack(stack)
-    _listenerRecords.forEach(({ onStreamHalted }) => onStreamHalted?.(newStack))
+    _listenerRecords.forEach(({ onStreamHalted }) =>
+      onStreamHalted?.(newStack, event),
+    )
+  }
+
+  const cancelStream: CancelStreamOperator = (stack) => {
+    emitStreamHalted(stack, cancelledHaltEvent)
   }
 
   const _setInternal =
     (isSilent: boolean): ObservableSetter<NullableInferredT> =>
     (newValue, stack) => {
+      if (isStreamCancelled) {
+        return false
+      }
       const reducedValue: NullableInferredT = (
         isFunction(newValue) ? newValue(get()) : newValue
       ) as NullableInferredT
@@ -135,7 +173,10 @@ export const createObservable = <
         if (!isSilent) {
           // if silent then we can assume the user knows
           // what they want to (or not to) emit
-          emitStreamHalted(stack)
+          emitStreamHalted(stack, {
+            reason: StreamHaltReason.Unchanged,
+            isTerminal: false,
+          })
         }
         return false
       }
@@ -182,7 +223,7 @@ export const createObservable = <
     onStreamHalted,
   ) => {
     const unsubscribe = subscribe(listener, onError, onStreamHalted)
-    if (listener) {
+    if (listener && !isStreamCancelled) {
       listener(value as Readonly<NullableInferredT>)
     }
     return unsubscribe
@@ -191,6 +232,16 @@ export const createObservable = <
   const unsubscribe: UnsubscribeFunction = (id: string) => {
     _listenerRecords = _listenerRecords.filter((lr) => lr.id !== id)
   }
+
+  const forwardStreamHalt =
+    <TargetT>(target: Observable<TargetT>): EmitStreamHaltedOperator =>
+    (stack, event) => {
+      if (event?.reason === StreamHaltReason.Cancelled) {
+        target.cancelStream(stack)
+        return
+      }
+      target.emitStreamHalted(stack, event)
+    }
 
   const combineLatestFrom = <U extends unknown[]>(
     ...observables: { [K in keyof U]: Observable<U[K]> }
@@ -221,6 +272,9 @@ export const createObservable = <
     subscribeFunctions.forEach((sub, i) => {
       sub(
         (val: U[keyof U], stack?: ObservableStackItem[]) => {
+          if (combinationObservable$.getIsStreamCancelled()) {
+            return
+          }
           combinationObservable$.set((values) => {
             const clone = [...values]
             clone[i] = val as CombinedValues[number]
@@ -228,7 +282,7 @@ export const createObservable = <
           }, stack)
         },
         (err: Error) => combinationObservable$.emitError(err),
-        combinationObservable$.emitStreamHalted,
+        forwardStreamHalt(combinationObservable$),
       )
     })
 
@@ -257,6 +311,9 @@ export const createObservable = <
         sourceValue: Readonly<NullableInferredT>,
         stack?: ObservableStackItem[],
       ) => {
+        if (resultObservable$.getIsStreamCancelled()) {
+          return
+        }
         const combined = [
           sourceValue,
           ...observables.map((obs) => obs.get()),
@@ -264,7 +321,7 @@ export const createObservable = <
         resultObservable$.set(combined, stack)
       },
       resultObservable$.emitError,
-      resultObservable$.emitStreamHalted,
+      forwardStreamHalt(resultObservable$),
     )
     return resultObservable$
   }
@@ -292,6 +349,9 @@ export const createObservable = <
 
     ;(executeOnCreation ? subscribeWithValue : subscribe)(
       (data: Readonly<NullableInferredT>, stack?: ObservableStackItem[]) => {
+        if (newObservable$.getIsStreamCancelled()) {
+          return
+        }
         const [newData, projectError] = tryCatchSync<NullableInferredNewT>(
           () => project(data),
           `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`,
@@ -303,7 +363,7 @@ export const createObservable = <
         }
       },
       newObservable$.emitError,
-      newObservable$.emitStreamHalted,
+      forwardStreamHalt(newObservable$),
     )
 
     return newObservable$
@@ -331,25 +391,68 @@ export const createObservable = <
       emitWhenValuesAreEqual,
     })
 
-    const projectToNewObservable = async (
+    type AsyncQueueItem = {
+      data: Readonly<NullableInferredT>
+      stack?: ObservableStackItem[]
+      sequence: number
+    }
+
+    let nextSequence = 0
+    let isProcessingQueue = false
+    const queue: AsyncQueueItem[] = []
+
+    const processQueue = async () => {
+      if (isProcessingQueue || newObservable$.getIsStreamCancelled()) {
+        return
+      }
+
+      const nextItem = queue.shift()
+      if (!nextItem) {
+        return
+      }
+
+      isProcessingQueue = true
+      const [newData, error] = await tryCatch<NullableInferredNewT>(
+        () => project(nextItem.data),
+        `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`,
+      )
+
+      isProcessingQueue = false
+
+      if (newObservable$.getIsStreamCancelled()) {
+        queue.length = 0
+        return
+      }
+
+      if (error) {
+        newObservable$.emitError(error, nextItem.stack)
+      } else {
+        newObservable$.set(newData as NullableInferredNewT, nextItem.stack)
+      }
+
+      processQueue()
+    }
+
+    const projectToNewObservable = (
       data: Readonly<NullableInferredT>,
       stack?: ObservableStackItem[],
     ) => {
-      const [newData, error] = await tryCatch<NullableInferredNewT>(
-        () => project(data),
-        `Stream Error: Attempt to project stream to "${name}" from "${getName()}" has failed.`,
-      )
-      if (error) {
-        newObservable$.emitError(error, stack)
-      } else {
-        newObservable$.set(newData as NullableInferredNewT, stack)
+      if (newObservable$.getIsStreamCancelled()) {
+        return
       }
+      queue.push({ data, stack, sequence: nextSequence++ })
+      processQueue()
     }
 
     ;(executeOnCreation ? subscribeWithValue : subscribe)(
       projectToNewObservable,
       newObservable$.emitError,
-      newObservable$.emitStreamHalted,
+      (stack, event) => {
+        if (event?.reason === StreamHaltReason.Cancelled) {
+          queue.length = 0
+        }
+        forwardStreamHalt(newObservable$)(stack, event)
+      },
     )
 
     return newObservable$
@@ -366,6 +469,9 @@ export const createObservable = <
 
     subscribe(
       (val, stack) => {
+        if (newObservable$.getIsStreamCancelled()) {
+          return
+        }
         callback(val)
         newObservable$.setSilent(val, stack)
         // here we force the emit regardless of the emitWhenValuesAreEqual flag
@@ -373,7 +479,7 @@ export const createObservable = <
         newObservable$.emit(stack)
       },
       newObservable$.emitError,
-      newObservable$.emitStreamHalted,
+      forwardStreamHalt(newObservable$),
     )
 
     return newObservable$
@@ -388,13 +494,52 @@ export const createObservable = <
       emitWhenValuesAreEqual,
     })
 
+    type DelayQueueItem = {
+      value: Readonly<NullableInferredT>
+      stack?: ObservableStackItem[]
+    }
+
+    let isProcessingDelayQueue = false
+    const queue: DelayQueueItem[] = []
+
+    const processQueue = async () => {
+      if (isProcessingDelayQueue || newObservable$.getIsStreamCancelled()) {
+        return
+      }
+
+      const nextItem = queue.shift()
+      if (!nextItem) {
+        return
+      }
+
+      isProcessingDelayQueue = true
+      await new Promise((r) => setTimeout(r, milliseconds))
+      isProcessingDelayQueue = false
+
+      if (newObservable$.getIsStreamCancelled()) {
+        queue.length = 0
+        return
+      }
+
+      newObservable$.set(nextItem.value as NullableInferredT, nextItem.stack)
+      processQueue()
+    }
+
     subscribe(
-      async (val, stack) => {
-        await new Promise((r) => setTimeout(r, milliseconds))
-        newObservable$.set(val as NullableInferredT, stack)
+      (val, stack) => {
+        if (newObservable$.getIsStreamCancelled()) {
+          return
+        }
+        queue.push({ value: val, stack })
+        processQueue()
       },
       newObservable$.emitError,
-      newObservable$.emitStreamHalted,
+      (stack, event) => {
+        if (event?.reason === StreamHaltReason.Cancelled) {
+          queue.length = 0
+        }
+        forwardStreamHalt(newObservable$)(stack, event)
+      },
     )
 
     return newObservable$
@@ -416,6 +561,9 @@ export const createObservable = <
 
     subscribeWithValue(
       (val, stack) => {
+        if (newObservable$.getIsStreamCancelled()) {
+          return
+        }
         const now = Date.now()
         if (shouldEmit(now)) {
           lastEmittedAt = now
@@ -423,7 +571,7 @@ export const createObservable = <
         }
       },
       newObservable$.emitError,
-      newObservable$.emitStreamHalted,
+      forwardStreamHalt(newObservable$),
     )
 
     return newObservable$
@@ -483,26 +631,40 @@ export const createObservable = <
     })
 
     const handleError = (error: Error, stack?: ObservableStackItem[]) => {
+      if (newObservable$.getIsStreamCancelled()) {
+        return
+      }
       if (onError) {
         try {
           const errorResolution = onError(error, get())
           if (errorResolution) {
             newObservable$.set(errorResolution.restoreValue, stack)
           } else {
-            newObservable$.emitStreamHalted(stack)
+            newObservable$.emitStreamHalted(stack, {
+              reason: StreamHaltReason.ErrorHandled,
+              isTerminal: false,
+            })
           }
         } catch (err) {
           newObservable$.emitError(err as Error, stack)
         }
       } else {
-        newObservable$.emitStreamHalted(stack)
+        newObservable$.emitStreamHalted(stack, {
+          reason: StreamHaltReason.ErrorHandled,
+          isTerminal: false,
+        })
       }
     }
 
     subscribe(
-      (val, stack) => newObservable$.set(val, stack),
+      (val, stack) => {
+        if (newObservable$.getIsStreamCancelled()) {
+          return
+        }
+        newObservable$.set(val, stack)
+      },
       handleError,
-      newObservable$.emitStreamHalted,
+      forwardStreamHalt(newObservable$),
     )
 
     return newObservable$
@@ -512,17 +674,19 @@ export const createObservable = <
    * finally (name when exported) allows you to execute a callback for all subscription events:
    * - onValue: when a new value is emitted
    * - onError: when an error occurs
-   * - onComplete: when the stream is halted
+   * - onHalt: when an emission halts without cancelling the stream
+   * - onCancel: when the stream is cancelled
    *
    * This is useful for cleanup operations, logging, or any side effects
    * that need to happen regardless of the subscription outcome.
    */
   const final = (
     callback: (
-      type: 'onValue' | 'onError' | 'onComplete',
+      type: 'onValue' | 'onError' | 'onHalt' | 'onCancel',
       value?: Readonly<NullableInferredT>,
       error?: Error,
       stack?: ObservableStackItem[],
+      event?: StreamHaltEvent,
     ) => void,
   ) => {
     const newObservable$ = createObservable<NullableInferredT, false>({
@@ -533,16 +697,38 @@ export const createObservable = <
 
     subscribe(
       (val, stack) => {
+        if (newObservable$.getIsStreamCancelled()) {
+          return
+        }
         callback('onValue', val, undefined, stack)
         newObservable$.set(val, stack)
       },
       (error, stack) => {
+        if (newObservable$.getIsStreamCancelled()) {
+          return
+        }
         callback('onError', undefined, error, stack)
         newObservable$.emitError(error, stack)
       },
-      (stack) => {
-        callback('onComplete', undefined, undefined, stack)
-        newObservable$.emitStreamHalted(stack)
+      (stack, event) => {
+        if (newObservable$.getIsStreamCancelled()) {
+          return
+        }
+        const haltEvent = event ?? manualHaltEvent
+        callback(
+          haltEvent.reason === StreamHaltReason.Cancelled
+            ? 'onCancel'
+            : 'onHalt',
+          undefined,
+          undefined,
+          stack,
+          haltEvent,
+        )
+        if (haltEvent.reason === StreamHaltReason.Cancelled) {
+          newObservable$.cancelStream(stack)
+        } else {
+          newObservable$.emitStreamHalted(stack, haltEvent)
+        }
       },
     )
 
@@ -567,16 +753,22 @@ export const createObservable = <
     // Subscribe to the original observable
     observable.subscribe(
       (nextValue, stack) => {
+        if (guardedObservable.getIsStreamCancelled()) {
+          return
+        }
         const prevValue = guardedObservable.get()
         if (predicate(nextValue, prevValue)) {
           guardedObservable.set(nextValue, stack)
         } else {
           // The value is not passed through, but an error must be
-          guardedObservable.emitStreamHalted(stack)
+          guardedObservable.emitStreamHalted(stack, {
+            reason: StreamHaltReason.GuardRejected,
+            isTerminal: false,
+          })
         }
       },
       guardedObservable.emitError,
-      guardedObservable.emitStreamHalted,
+      forwardStreamHalt(guardedObservable),
     )
 
     return guardedObservable
@@ -617,11 +809,13 @@ export const createObservable = <
     emit,
     emitError,
     emitStreamHalted,
+    cancelStream,
     mapEntries,
     getInitialValue,
     guard,
     finally: final,
     getIsFlushable,
+    getIsStreamCancelled,
   }
 
   return observable

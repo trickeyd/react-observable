@@ -3,9 +3,10 @@ import { Store } from '../types/store'
 import { ReactObservableContext } from '../store/context'
 import { wrapObservable } from '../utils/stream'
 import { Safe } from '../types/access'
+import { StreamSubscription } from '../types/observable'
 
 export const useStoreProxy = (
-  onSubscription: (unsubscribe: () => void) => void,
+  onSubscription: (subscription: StreamSubscription) => void,
 ) => {
   const observableStore = useContext(ReactObservableContext)
   if (!observableStore) {

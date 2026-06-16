@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { Observable } from '../types/observable'
+import { Observable, StreamSubscription } from '../types/observable'
 import { Readonly } from '../types/access'
 import { useStoreProxy } from './use-store-proxy'
 import { wrapObservable } from '../utils/stream'
@@ -14,10 +14,10 @@ export function useObservableValue<O extends Observable<any>>(
   }) => O,
 ): ObservableValue<O> {
   const ref = useRef<O | undefined>(undefined)
-  const subscriptionsRef = useRef<(() => void)[]>([])
+  const subscriptionsRef = useRef<StreamSubscription[]>([])
 
-  const handleSubscription = useCallback((unsubscribe: () => void) => {
-    subscriptionsRef.current.push(unsubscribe)
+  const handleSubscription = useCallback((subscription: StreamSubscription) => {
+    subscriptionsRef.current.push(subscription)
   }, [])
 
   const observableStoreProxy = useStoreProxy(handleSubscription)
@@ -44,8 +44,15 @@ export function useObservableValue<O extends Observable<any>>(
     })
 
     return () => {
+      ref.current?.cancelStream()
+      subscriptionsRef.current.forEach((subscription) =>
+        subscription.cancelStream?.(),
+      )
+
       sub?.()
-      subscriptionsRef.current.forEach((unsub) => unsub())
+      subscriptionsRef.current.forEach((subscription) =>
+        subscription.unsubscribe(),
+      )
       subscriptionsRef.current.length = 0
     }
   }, [])

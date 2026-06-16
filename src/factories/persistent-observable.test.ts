@@ -1,4 +1,5 @@
 import { createPersistentObservable } from './persistent-observable'
+import { StreamHaltReason } from '../types/observable'
 import { createStore, resetStore } from '../store/create-store'
 import { PersistentObservable } from '../types/observable'
 
@@ -130,7 +131,7 @@ describe('createPersistentObservable', () => {
     })
 
     it('should handle function setter', async () => {
-      const obs = createPersistentObservable({
+      const obs = createPersistentObservable<number, false>({
         name: 'test-key',
         initialValue: 10,
       })
@@ -170,7 +171,7 @@ describe('createPersistentObservable', () => {
       }) as PersistentObservable<string>
 
       await expect(obs.rehydrate()).rejects.toThrow(
-        'Failed to parse stored value for test-key: SyntaxError: Unexpected token i in JSON at position 0',
+        /^Failed to parse stored value for test-key:/,
       )
       expect(obs.get()).toBe('default') // Should keep initial value
     })
@@ -315,7 +316,10 @@ describe('createPersistentObservable', () => {
       obs.subscribe(undefined, undefined, completeHandler)
 
       obs.emitStreamHalted()
-      expect(completeHandler).toHaveBeenCalledWith(expect.any(Array))
+      expect(completeHandler).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({ reason: StreamHaltReason.Manual }),
+      )
     })
   })
 

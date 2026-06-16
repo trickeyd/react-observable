@@ -335,6 +335,25 @@ describe('useEffectStream', () => {
       expect(unsubscribeSpy).toHaveBeenCalled()
     })
 
+    it('should cancel result observable before unsubscribing on unmount', async () => {
+      const obs = createObservable({ initialValue: 'test' })
+      const cleanupOrder: string[] = []
+      jest.spyOn(obs, 'cancelStream').mockImplementation(() => {
+        cleanupOrder.push('cancel')
+      })
+      jest.spyOn(obs, 'subscribeWithValue').mockReturnValue(() => {
+        cleanupOrder.push('unsubscribe')
+      })
+
+      const { unmount } = await renderWithProvider(
+        <TestComponent initialise={({ $, store }) => obs} />,
+      )
+
+      unmount()
+
+      expect(cleanupOrder).toEqual(['cancel', 'unsubscribe'])
+    })
+
     it('should handle multiple subscriptions', async () => {
       const obs1 = createObservable({ initialValue: 'obs1' })
       const obs2 = createObservable({ initialValue: 'obs2' })
