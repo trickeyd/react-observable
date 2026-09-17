@@ -126,6 +126,16 @@ describe('General utilities', () => {
       }
     })
 
+    it('should serialize thrown objects instead of [object Object]', async () => {
+      const [data, error] = await tryCatch(async () => {
+        throw { detail: 'Server said no', status: 400 }
+      })
+      expect(data).toBeUndefined()
+      expect(error).toBeInstanceOf(Error)
+      expect(error?.message).toBe('{"detail":"Server said no","status":400}')
+      expect(error?.message).not.toBe('[object Object]')
+    })
+
     it('should handle complex return values', async () => {
       const complexValue = {
         name: 'test',

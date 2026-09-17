@@ -40,6 +40,7 @@ export function createPersistentObservable<
   name,
   initialValue,
   equalityFn,
+  isFlushable,
   mergeOnHydration = defaultMergeOnHydration,
 }: CreatePersistentObservableParams<InferNullable<T, IsNullable>>): Observable<
   InferNullable<T, IsNullable>
@@ -53,7 +54,7 @@ export function createPersistentObservable<
     })
   }
 
-  const base = createObservable({ initialValue, name })
+  const base = createObservable({ initialValue, name, isFlushable })
 
   const _setInternal =
     (isSilent: boolean): ObservableSetter<NullableInferredT> =>

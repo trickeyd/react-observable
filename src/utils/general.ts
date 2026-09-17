@@ -1,8 +1,24 @@
+const stringifyUnknownError = (error: unknown): string => {
+  if (typeof error === 'string') return error
+  if (error instanceof Error) return error.message
+  if (error == null) return String(error)
+
+  try {
+    const json = JSON.stringify(error)
+    if (json && json !== '{}') return json
+  } catch {
+    // fall through
+  }
+
+  return String(error)
+}
+
 const normalizeCaughtError = (
   error: unknown,
   errorMessage?: string,
 ): Error => {
-  const err = error instanceof Error ? error : new Error(String(error))
+  const err =
+    error instanceof Error ? error : new Error(stringifyUnknownError(error))
   if (!errorMessage) {
     return err
   }

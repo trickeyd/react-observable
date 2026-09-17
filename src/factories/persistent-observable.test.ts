@@ -1,6 +1,6 @@
 import { createPersistentObservable } from './persistent-observable'
 import { StreamHaltReason } from '../types/observable'
-import { createStore, resetStore } from '../store/create-store'
+import { createStore, flush, resetStore } from '../store/create-store'
 import { PersistentObservable } from '../types/observable'
 
 // Mock storage implementation
@@ -320,6 +320,52 @@ describe('createPersistentObservable', () => {
         expect.any(Array),
         expect.objectContaining({ reason: StreamHaltReason.Manual }),
       )
+    })
+  })
+
+  describe('Flushability', () => {
+    it('defaults to flushable', () => {
+      const obs = createPersistentObservable({
+        name: 'flush-default',
+        initialValue: 'default',
+      })
+
+      expect(obs.getIsFlushable()).toBe(true)
+    })
+
+    it('honours isFlushable: false', () => {
+      const obs = createPersistentObservable({
+        name: 'flush-false',
+        initialValue: 'default',
+        isFlushable: false,
+      })
+
+      expect(obs.getIsFlushable()).toBe(false)
+    })
+
+    it('does not reset a non-flushable persist on flush', () => {
+      resetStore()
+      const kept$ = createPersistentObservable({
+        name: 'kept',
+        initialValue: 'initial',
+        isFlushable: false,
+      })
+      const flushed$ = createPersistentObservable({
+        name: 'flushed',
+        initialValue: 'initial',
+      })
+
+      createStore(
+        { persist: { kept$, flushed$ } },
+        { persistentStorage: mockStorage },
+      )
+
+      kept$.set('keep-me')
+      flushed$.set('wipe-me')
+      flush()
+
+      expect(kept$.get()).toBe('keep-me')
+      expect(flushed$.get()).toBe('initial')
     })
   })
 
