@@ -14,6 +14,7 @@ jobs:
 
     permissions:
       contents: write
+      id-token: write
 
     steps:
       - name: Checkout code
@@ -26,8 +27,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
+          # Trusted publishing needs Node >= 22.14 and npm >= 11.5.1
+          node-version: '24'
+
+      - name: Install npm CLI for trusted publishing
+        run: npm install -g npm@11
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
@@ -49,18 +53,15 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           echo "Publishing new version: $VERSION"
 
-          # Publish to npm first to ensure it succeeds before we push changes
+          # OIDC trusted publisher — do not pass NODE_AUTH_TOKEN here.
+          # setup-node's registry-url + _authToken line would skip OIDC.
           npm publish --access public
 
-          # Now commit the version change
           git add package.json
           git commit -m "chore: release v$VERSION"
 
-          # Tag the new version
           git tag "v$VERSION"
 
-          # Push the commit and tag back to the repository
           git push --follow-tags
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
