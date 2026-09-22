@@ -283,4 +283,64 @@ describe('createCommandStream', () => {
       expect(data).toBe('test12')
     })
   })
+
+  describe('isInFlight', () => {
+    it('is false before a run and after it settles', async () => {
+      let release: (() => void) | undefined
+      const command = createCommandStream<string, string>(({ $ }) => {
+        return $.streamAsync(async (value) => {
+          await new Promise<void>((resolve) => {
+            release = resolve
+          })
+          return value
+        }) as any
+      })
+
+      expect(command.isInFlight()).toBe(false)
+      const pending = command('test')
+      expect(command.isInFlight()).toBe(true)
+      release?.()
+      await pending
+      expect(command.isInFlight()).toBe(false)
+    })
+
+    it('is true during the synchronous start of a run', async () => {
+      let seenDuringRun = false
+      const command = createCommandStream<string, string>(({ $ }) => {
+        return $.streamAsync(async (value) => {
+          seenDuringRun = command.isInFlight()
+          return value
+        }) as any
+      })
+
+      await command('test')
+      expect(seenDuringRun).toBe(true)
+      expect(command.isInFlight()).toBe(false)
+    })
+
+    it('stays true when singleFlight joins the current run', async () => {
+      let release: (() => void) | undefined
+      const command = createCommandStream<string, string>(
+        ({ $ }) => {
+          return $.streamAsync(async (value) => {
+            await new Promise<void>((resolve) => {
+              release = resolve
+            })
+            return value
+          }) as any
+        },
+        { singleFlight: true },
+      )
+
+      const first = command('first')
+      const second = command('second')
+
+      expect(second).toBe(first)
+      expect(command.isInFlight()).toBe(true)
+      release?.()
+      const [data] = await first
+      expect(data).toBe('first')
+      expect(command.isInFlight()).toBe(false)
+    })
+  })
 })

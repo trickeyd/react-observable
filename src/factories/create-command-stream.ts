@@ -42,6 +42,7 @@ export const createCommandStream = <
     payload?: InputT,
   ): Promise<ExecuteReturnType<InferNullable<ReturnT, IsNullable>>>
   exit$: Observable<InferNullable<ReturnT, IsNullable>>
+  isInFlight: () => boolean
 } => {
   type NullableInferredReturnT = InferNullable<ReturnT, IsNullable>
 
@@ -60,6 +61,7 @@ export const createCommandStream = <
   const isInitialised = createObservable<boolean>({ initialValue: false })
   let inFlight: Promise<ExecuteReturnType<NullableInferredReturnT>> | null =
     null
+  let flightCount = 0
 
   const initialiseStream = (store: Safe<Store>) => {
     const stream$: Observable<NullableInferredReturnT> = initialise({
@@ -77,6 +79,7 @@ export const createCommandStream = <
       return inFlight
     }
 
+    flightCount += 1
     const promise = new Promise<ExecuteReturnType<NullableInferredReturnT>>(
       (resolve) => {
         const run = () => {
@@ -142,15 +145,20 @@ export const createCommandStream = <
       },
     )
 
+    promise.finally(() => {
+      flightCount -= 1
+      if (singleFlight && inFlight === promise) {
+        inFlight = null
+      }
+    })
+
     if (singleFlight) {
       inFlight = promise
-      promise.finally(() => {
-        inFlight = null
-      })
     }
 
     return promise
   }
   execute.exit$ = exit$
+  execute.isInFlight = () => flightCount > 0
   return execute
 }
